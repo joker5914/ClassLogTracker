@@ -26,23 +26,39 @@ local classColors = {
   Hunter  = {0.67, 0.83, 0.45},
 }
 
+local function GetClassByName(name)
+  if UnitName("player") == name then
+    return UnitClass("player")
+  end
+  for i = 1, 4 do
+    if UnitName("party" .. i) == name then
+      return UnitClass("party" .. i)
+    end
+  end
+  for i = 1, 40 do
+    if UnitName("raid" .. i) == name then
+      return UnitClass("raid" .. i)
+    end
+  end
+  return nil
+end
+
 local function AddLogLine(msg, sender)
-  for _, class in ipairs(classList) do
-    if UnitClass(sender) == class then
-      if not ClassLogTracker.logLines[class] then
-        ClassLogTracker.logLines[class] = {}
-      end
-      table.insert(ClassLogTracker.logLines[class], msg)
-      if table.getn(ClassLogTracker.logLines[class]) > 200 then
-        table.remove(ClassLogTracker.logLines[class], 1)
-      end
-      if class == ClassLogTracker.selectedClass then
-        ClassLogTracker:UpdateLogText()
-      end
-      break
+  local class = GetClassByName(sender)
+  if class then
+    if not ClassLogTracker.logLines[class] then
+      ClassLogTracker.logLines[class] = {}
+    end
+    table.insert(ClassLogTracker.logLines[class], msg)
+    if table.getn(ClassLogTracker.logLines[class]) > 200 then
+      table.remove(ClassLogTracker.logLines[class], 1)
+    end
+    if class == ClassLogTracker.selectedClass then
+      ClassLogTracker:UpdateLogText()
     end
   end
 end
+
 
 function ClassLogTracker:UpdateLogText()
   if not self.textFrame then return end
