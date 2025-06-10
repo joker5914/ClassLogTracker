@@ -146,7 +146,13 @@ eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE")
 eventFrame:SetScript("OnEvent", function() ClassLogTracker:OnEvent() end)
 
+DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
+
 SLASH_CLASSLOG1 = "/classlog"
 SlashCmdList["CLASSLOG"] = function()
-  ClassLogTracker:CreateUI()
+  if ClassLogTracker then
+    ClassLogTracker:CreateUI()
+  else
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Error: ClassLogTracker not loaded properly.|r")
+  end
 end
