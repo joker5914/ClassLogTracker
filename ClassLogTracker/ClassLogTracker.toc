@@ -1,0 +1,8 @@
+## Interface: 11200
+## Title: |cffe5b3e5ClassLogTracker|r
+## Notes: Tracks and displays combat log events by class in party/raid.
+## Author: Coldsnappy
+## Version: 1.0
+## SavedVariables: 
+
+ClassLogTracker.lua

@@ -1,0 +1,152 @@
+-- ClassLogTracker Addon
+ClassLogTracker = {}
+ClassLogTracker.frame = nil
+ClassLogTracker.scrollFrame = nil
+ClassLogTracker.textFrame = nil
+ClassLogTracker.selectedClass = nil
+ClassLogTracker.logLines = {}
+ClassLogTracker.filterType = "party"
+
+local classList = {
+  "Warrior", "Paladin", "Priest", "Rogue", "Warlock",
+  "Mage", "Shaman", "Druid", "Hunter"
+}
+
+local classColors = {
+  Warrior = {1.0, 0.78, 0.55},
+  Paladin = {0.96, 0.55, 0.73},
+  Priest  = {1.0, 1.0, 1.0},
+  Rogue   = {1.0, 0.96, 0.41},
+  Warlock = {0.58, 0.51, 0.79},
+  Mage    = {0.41, 0.8, 0.94},
+  Shaman  = {0.0, 0.44, 0.87},
+  Druid   = {1.0, 0.49, 0.04},
+  Hunter  = {0.67, 0.83, 0.45},
+}
+
+local function AddLogLine(msg, sender)
+  for _, class in ipairs(classList) do
+    if UnitClass(sender) == class then
+      if not ClassLogTracker.logLines[class] then
+        ClassLogTracker.logLines[class] = {}
+      end
+      table.insert(ClassLogTracker.logLines[class], msg)
+      if #ClassLogTracker.logLines[class] > 200 then
+        table.remove(ClassLogTracker.logLines[class], 1)
+      end
+      if class == ClassLogTracker.selectedClass then
+        ClassLogTracker:UpdateLogText()
+      end
+      break
+    end
+  end
+end
+
+function ClassLogTracker:UpdateLogText()
+  if not self.textFrame then return end
+  local class = self.selectedClass
+  if not class or not self.logLines[class] then
+    self.textFrame:SetText("No data for this class.")
+    return
+  end
+  self.textFrame:SetText(table.concat(self.logLines[class], "\n"))
+end
+
+function ClassLogTracker:ToggleFilterType()
+  self.filterType = (self.filterType == "party") and "raid" or "party"
+  self.filterButton:SetText("Filter: " .. self.filterType)
+end
+
+function ClassLogTracker:CreateUI()
+  if self.frame then
+    self.frame:Show()
+    return
+  end
+
+  self.logLines = {}
+
+  local f = CreateFrame("Frame", "ClassLogTrackerFrame", UIParent)
+  f:SetBackdrop({
+    bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+    edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 }
+  })
+  f:SetBackdropColor(0, 0, 0, 0.9)
+  f:SetWidth(600)
+  f:SetHeight(500)
+  f:SetPoint("CENTER")
+  f:SetMovable(true)
+  f:EnableMouse(true)
+  f:RegisterForDrag("LeftButton")
+  f:SetScript("OnDragStart", function() f:StartMoving() end)
+  f:SetScript("OnDragStop", function() f:StopMovingOrSizing() end)
+
+  local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+  close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
+  close:SetScript("OnClick", function() f:Hide() end)
+
+  local filter = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  filter:SetWidth(120)
+  filter:SetHeight(22)
+  filter:SetText("Filter: party")
+  filter:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
+  filter:SetScript("OnClick", function() ClassLogTracker:ToggleFilterType() end)
+  self.filterButton = filter
+
+  local y = -40
+  for i, class in ipairs(classList) do
+    local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    btn:SetWidth(80)
+    btn:SetHeight(22)
+    btn:SetText(class)
+    btn:SetPoint("TOPLEFT", f, "TOPLEFT", 10 + ((i - 1) % 3) * 90, y - math.floor((i - 1) / 3) * 26)
+    local r, g, b = unpack(classColors[class])
+    btn:GetFontString():SetTextColor(r, g, b)
+    btn:SetScript("OnClick", function()
+      ClassLogTracker.selectedClass = class
+      ClassLogTracker:UpdateLogText()
+    end)
+  end
+
+  local scroll = CreateFrame("ScrollFrame", "ClassLogScroll", f, "UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -140)
+  scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -30, 10)
+
+  local text = CreateFrame("EditBox", nil, scroll)
+  text:SetMultiLine(true)
+  text:SetFontObject(ChatFontNormal)
+  text:SetWidth(540)
+  text:SetAutoFocus(false)
+  text:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+
+  scroll:SetScrollChild(text)
+  self.frame = f
+  self.scrollFrame = scroll
+  self.textFrame = text
+end
+
+function ClassLogTracker:OnEvent()
+  local msg, sender = arg1, arg2
+  if sender and msg then
+    if self.filterType == "party" and UnitInParty(sender) then
+      AddLogLine(msg, sender)
+    elseif self.filterType == "raid" and UnitInRaid(sender) then
+      AddLogLine(msg, sender)
+    end
+  end
+end
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PARTY_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_BUFFS")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_COMBAT_PARTY_HITS")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE")
+eventFrame:SetScript("OnEvent", function() ClassLogTracker:OnEvent() end)
+
+SLASH_CLASSLOG1 = "/classlog"
+SlashCmdList["CLASSLOG"] = function()
+  ClassLogTracker:CreateUI()
+end
