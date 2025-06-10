@@ -25,7 +25,7 @@
 4. Paste this repo URL:
 
    ```
-   https://github.com/yourname/ClassLogTracker
+   https://github.com/joker5914/ClassLogTracker
    ```
 
 5. Launch the game and enable `ClassLogTracker` in your AddOns menu
