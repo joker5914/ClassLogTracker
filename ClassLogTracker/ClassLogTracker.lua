@@ -7,6 +7,8 @@ ClassLogTracker.selectedClass = nil
 ClassLogTracker.logLines = {}
 ClassLogTracker.filterType = "party"
 
+local mod = math.mod or function(a, b) return a - math.floor(a / b) * b end
+
 local classList = {
   "Warrior", "Paladin", "Priest", "Rogue", "Warlock",
   "Mage", "Shaman", "Druid", "Hunter"
@@ -100,7 +102,7 @@ function ClassLogTracker:CreateUI()
     btn:SetWidth(80)
     btn:SetHeight(22)
     btn:SetText(class)
-    btn:SetPoint("TOPLEFT", f, "TOPLEFT", 10 + ((i - 1) % 3) * 90, y - math.floor((i - 1) / 3) * 26)
+    btn:SetPoint("TOPLEFT", f, "TOPLEFT", 10 + mod((i - 1), 3) * 90, y - math.floor((i - 1) / 3) * 26)
     local r, g, b = unpack(classColors[class])
     btn:GetFontString():SetTextColor(r, g, b)
     btn:SetScript("OnClick", function()
