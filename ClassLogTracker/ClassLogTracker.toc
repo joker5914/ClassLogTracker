@@ -2,7 +2,7 @@
 ## Title: |cffe5b3e5ClassLogTracker|r
 ## Notes: Tracks and displays combat log events by class in party/raid.
 ## Author: Coldsnappy
-## Version: 1.0
+## Version: 1.0.1
 ## SavedVariables: 
 
 ## embed Libs
