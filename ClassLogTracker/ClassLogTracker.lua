@@ -7,10 +7,12 @@ ClassLogTracker.selectedClass = nil
 ClassLogTracker.logLines      = {}
 ClassLogTracker.filterType    = "party"
 
+-- simple modulo
 local function mod(a, b)
   return a - math.floor(a / b) * b
 end
 
+-- strip non-letters & lowercase
 local function normalized(name)
   if not name then return "" end
   return string.lower(string.gsub(name, "[^%a]", ""))
@@ -33,6 +35,7 @@ local classColors = {
   Hunter  = {0.67,0.83,0.45},
 }
 
+-- map unit-name → class token
 local function GetClassByName(name)
   name = normalized(name)
   if normalized(UnitName("player") or "") == name then
@@ -51,12 +54,15 @@ local function GetClassByName(name)
   return nil
 end
 
+-- record a log line under the right class
 local function AddLogLine(msg, sender)
   local class = GetClassByName(sender)
   if not class then return end
 
   ClassLogTracker.logLines[class] = ClassLogTracker.logLines[class] or {}
   table.insert(ClassLogTracker.logLines[class], msg)
+
+  -- keep only last 200 entries
   if table.getn(ClassLogTracker.logLines[class]) > 200 then
     table.remove(ClassLogTracker.logLines[class], 1)
   end
@@ -66,6 +72,7 @@ local function AddLogLine(msg, sender)
   end
 end
 
+-- redraw EditBox with the selected class’s log
 function ClassLogTracker:UpdateLogText()
   if not self.textFrame then return end
   local c = self.selectedClass
@@ -76,11 +83,13 @@ function ClassLogTracker:UpdateLogText()
   self.textFrame:SetText(table.concat(self.logLines[c], "\n"))
 end
 
+-- toggle party/raid filter text
 function ClassLogTracker:ToggleFilterType()
   self.filterType = (self.filterType=="party") and "raid" or "party"
   self.filterButton:SetText("Filter: "..self.filterType)
 end
 
+-- build (or show) the UI
 function ClassLogTracker:CreateUI()
   if self.frame then
     self.frame:Show()
@@ -89,6 +98,7 @@ function ClassLogTracker:CreateUI()
 
   self.logLines = {}
 
+  -- main frame
   local f = CreateFrame("Frame","ClassLogTrackerFrame",UIParent)
   f:SetBackdrop({
     bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
@@ -99,11 +109,13 @@ function ClassLogTracker:CreateUI()
   f:SetBackdropColor(0,0,0,0.9)
   f:SetWidth(600); f:SetHeight(500)
   f:SetPoint("CENTER",UIParent,"CENTER",0,0)
-  f:EnableMouse(true); f:RegisterForDrag("LeftButton"); f:SetMovable(true)
+  f:EnableMouse(true)
+  f:RegisterForDrag("LeftButton")
+  f:SetMovable(true)
   f:SetScript("OnDragStart", function() f:StartMoving() end)
   f:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
 
-  -- close
+  -- close button
   local close = CreateFrame("Button",nil,f,"UIPanelCloseButton")
   close:SetPoint("TOPRIGHT",f,"TOPRIGHT",-4,-4)
   close:SetScript("OnClick", function() f:Hide() end)
@@ -117,12 +129,13 @@ function ClassLogTracker:CreateUI()
   self.filterButton = filter
 
   -- class buttons
-  local perRow, sx, sy = 6, 85, 26
+  local perRow, sx, sy = 6,85,26
   local ox, oy = 10, -40
   for i, cls in ipairs(classList) do
     local btn = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     btn:SetWidth(80); btn:SetHeight(22)
     btn:SetText(cls)
+
     local row = math.floor((i-1)/perRow)
     local col = mod(i-1,perRow)
     btn:SetPoint("TOPLEFT",f,"TOPLEFT",ox+col*sx,oy-row*sy)
@@ -130,15 +143,17 @@ function ClassLogTracker:CreateUI()
     local r,g,b = unpack(classColors[cls])
     btn:GetFontString():SetTextColor(r,g,b)
 
-    btn.class = cls
-    -- <<< UPDATED OnClick: explicitly pass tracker into UpdateLogText
-    btn:SetScript("OnClick", function(btn)
-      ClassLogTracker.selectedClass = btn.class
-      ClassLogTracker.UpdateLogText(ClassLogTracker)
-    end)
+    -- capture each class in 'cls' and use no-arg closure
+    do
+      local thisClass = cls
+      btn:SetScript("OnClick", function()
+        ClassLogTracker.selectedClass = thisClass
+        ClassLogTracker:UpdateLogText()
+      end)
+    end
   end
 
-  -- scroll area
+  -- scrollable text area
   local scroll = CreateFrame("ScrollFrame","ClassLogScroll",f,"UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT",     f,"TOPLEFT",     10,  -120)
   scroll:SetPoint("BOTTOMRIGHT", f,"BOTTOMRIGHT", -30,    10)
@@ -159,11 +174,13 @@ end
 -- explicit params, no varargs
 function ClassLogTracker:OnEvent(msg, sender)
   if type(msg)~="string" or msg=="" then return end
+
   if (not sender or sender=="") and msg:find("^You ") then
     sender = UnitName("player")
   elseif not sender or sender=="" then
     return
   end
+
   sender = sender:match("^[^-]+")
   AddLogLine(msg, sender)
 end
@@ -185,6 +202,7 @@ for _, e in ipairs({
 }) do
   eventFrame:RegisterEvent(e)
 end
+
 eventFrame:SetScript("OnEvent", function(_,_,msg,sender)
   ClassLogTracker:OnEvent(msg,sender)
 end)
