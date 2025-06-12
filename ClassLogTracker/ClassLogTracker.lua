@@ -104,46 +104,43 @@ function ClassLogTracker:CreateUI()
     bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
     edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
     tile     = true, tileSize=16, edgeSize=16,
-    insets   = {left=4,right=4,top=4,bottom=4},
+    insets   = { left=4, right=4, top=4, bottom=4 },
   })
   f:SetBackdropColor(0,0,0,0.9)
   f:SetWidth(600); f:SetHeight(500)
-  f:SetPoint("CENTER",UIParent,"CENTER",0,0)
+  f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
   f:EnableMouse(true)
-  f:RegisterForDrag("LeftButton")
-  f:SetMovable(true)
+  f:RegisterForDrag("LeftButton"); f:SetMovable(true)
   f:SetScript("OnDragStart", function() f:StartMoving() end)
   f:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
 
   -- close button
   local close = CreateFrame("Button",nil,f,"UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT",f,"TOPRIGHT",-4,-4)
+  close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
   close:SetScript("OnClick", function() f:Hide() end)
 
   -- filter toggle
   local filter = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   filter:SetWidth(120); filter:SetHeight(22)
   filter:SetText("Filter: party")
-  filter:SetPoint("TOPLEFT",f,"TOPLEFT",10,-10)
-  filter:SetScript("OnClick",function() ClassLogTracker:ToggleFilterType() end)
+  filter:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
+  filter:SetScript("OnClick", function() ClassLogTracker:ToggleFilterType() end)
   self.filterButton = filter
 
   -- class buttons
-  local perRow, sx, sy = 6,85,26
+  local perRow, sx, sy = 6, 85, 26
   local ox, oy = 10, -40
   for i, cls in ipairs(classList) do
     local btn = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     btn:SetWidth(80); btn:SetHeight(22)
     btn:SetText(cls)
-
     local row = math.floor((i-1)/perRow)
     local col = mod(i-1,perRow)
-    btn:SetPoint("TOPLEFT",f,"TOPLEFT",ox+col*sx,oy-row*sy)
-
+    btn:SetPoint("TOPLEFT", f, "TOPLEFT", ox+col*sx, oy-row*sy)
     local r,g,b = unpack(classColors[cls])
     btn:GetFontString():SetTextColor(r,g,b)
 
-    -- capture each class in 'cls' and use no-arg closure
+    -- capture class in a local and use a no-arg closure
     do
       local thisClass = cls
       btn:SetScript("OnClick", function()
@@ -155,15 +152,15 @@ function ClassLogTracker:CreateUI()
 
   -- scrollable text area
   local scroll = CreateFrame("ScrollFrame","ClassLogScroll",f,"UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT",     f,"TOPLEFT",     10,  -120)
-  scroll:SetPoint("BOTTOMRIGHT", f,"BOTTOMRIGHT", -30,    10)
+  scroll:SetPoint("TOPLEFT",     f, "TOPLEFT",     10,  -120)
+  scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -30,    10)
 
   local text = CreateFrame("EditBox",nil,scroll)
   text:SetMultiLine(true)
   text:SetFontObject(ChatFontNormal)
   text:SetWidth(540)
   text:SetAutoFocus(false)
-  text:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
+  text:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   scroll:SetScrollChild(text)
 
   self.frame       = f
@@ -171,40 +168,51 @@ function ClassLogTracker:CreateUI()
   self.textFrame   = text
 end
 
--- explicit params, no varargs
+-- explicit params, no varargs (still available but unused)
 function ClassLogTracker:OnEvent(msg, sender)
   if type(msg)~="string" or msg=="" then return end
-
   if (not sender or sender=="") and msg:find("^You ") then
     sender = UnitName("player")
   elseif not sender or sender=="" then
     return
   end
-
   sender = sender:match("^[^-]+")
   AddLogLine(msg, sender)
 end
 
--- register events
+-- replace all CHAT_MSG_* registration with raw combat log hook
 local eventFrame = CreateFrame("Frame")
-for _, e in ipairs({
-  "CHAT_MSG_SPELL_SELF_BUFF","CHAT_MSG_SPELL_SELF_DAMAGE",
-  "CHAT_MSG_SPELL_AURA_GONE_SELF","CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE","CHAT_MSG_COMBAT_SELF_HITS",
-  "CHAT_MSG_SPELL_PARTY_BUFF","CHAT_MSG_SPELL_PARTY_DAMAGE",
-  "CHAT_MSG_SPELL_AURA_GONE_PARTY","CHAT_MSG_SPELL_PERIODIC_PARTY_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE","CHAT_MSG_COMBAT_PARTY_HITS",
-  "CHAT_MSG_SPELL_FRIENDLYPLAYER_BUFF","CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE",
-  "CHAT_MSG_SPELL_AURA_GONE_FRIENDLYPLAYER",
-  "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE",
-  "CHAT_MSG_COMBAT_FRIENDLYPLAYER_HITS",
-}) do
-  eventFrame:RegisterEvent(e)
-end
+eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+eventFrame:SetScript("OnEvent", function(_, event)
+  if event ~= "COMBAT_LOG_EVENT_UNFILTERED" then return end
 
-eventFrame:SetScript("OnEvent", function(_,_,msg,sender)
-  ClassLogTracker:OnEvent(msg,sender)
+  local _, subEvent,
+        _, sourceName = CombatLogGetCurrentEventInfo()
+
+  if not sourceName then return end
+
+  -- only these sub-events
+  if subEvent == "SPELL_CAST_SUCCESS"
+  or subEvent == "SPELL_HEAL"
+  or subEvent == "SPELL_PERIODIC_HEAL"
+  or subEvent == "SPELL_AURA_APPLIED" then
+
+    -- build a brief message
+    local timestamp, _, _, srcGUID, srcName, _, _,
+          dstGUID, dstName, _, _, spellId, spellName =
+      CombatLogGetCurrentEventInfo()
+
+    local msgText
+    if subEvent == "SPELL_CAST_SUCCESS" then
+      msgText = spellName .. " → " .. (dstName or "unknown")
+    elseif subEvent:find("HEAL") then
+      msgText = spellName .. " healed " .. (dstName or "unknown")
+    else
+      msgText = spellName .. " applied to " .. (dstName or "unknown")
+    end
+
+    AddLogLine(msgText, srcName)
+  end
 end)
 
 DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
