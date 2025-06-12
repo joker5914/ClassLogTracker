@@ -7,11 +7,13 @@ ClassLogTracker.selectedClass = nil
 ClassLogTracker.logLines = {}
 ClassLogTracker.filterType = "party"
 
-local mod = math.fmod or function(a, b) return a - math.floor(a / b) * b end
+local function mod(a, b)
+  return a - math.floor(a / b) * b
+end
 
 local function normalized(name)
   if not name then return "" end
-  return string.lower(string.gsub(name, "%s+", ""))
+  return string.lower(string.gsub(name, "%%s+", ""))
 end
 
 local classList = {
