@@ -130,7 +130,7 @@ function ClassLogTracker:CreateUI()
     btn:SetHeight(22)
     btn:SetText(class)
     local row = math.floor((i - 1) / buttonsPerRow)
-    local col = (i - 1) % buttonsPerRow
+    local col = (i - 1) - row * buttonsPerRow
     btn:SetPoint("TOPLEFT", f, "TOPLEFT", startX + col * buttonSpacingX, startY - row * buttonSpacingY)
     local r, g, b = unpack(classColors[class])
     btn:GetFontString():SetTextColor(r, g, b)
