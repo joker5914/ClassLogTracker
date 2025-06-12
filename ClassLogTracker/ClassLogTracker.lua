@@ -60,7 +60,7 @@ local function AddLogLine(msg, sender)
       ClassLogTracker.logLines[class] = {}
     end
     table.insert(ClassLogTracker.logLines[class], msg)
-    if table.getn(ClassLogTracker.logLines[class]) > 200 then
+    if #ClassLogTracker.logLines[class] > 200 then
       table.remove(ClassLogTracker.logLines[class], 1)
     end
     if class == ClassLogTracker.selectedClass then
@@ -169,7 +169,7 @@ function ClassLogTracker:OnEvent()
     return
   end
 
-  sender = strmatch(sender, "([^%-]+)")
+  sender = string.gsub(sender, "-.*", "")
 
   if sender and msg then
     AddLogLine(msg, sender)
