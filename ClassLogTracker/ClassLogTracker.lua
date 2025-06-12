@@ -61,7 +61,7 @@ local function AddLogLine(msg, sender)
   table.insert(ClassLogTracker.logLines[class], msg)
 
   -- keep only the last 200 entries
-  if #ClassLogTracker.logLines[class] > 200 then
+  if table.getn(ClassLogTracker.logLines[class]) > 200 then
     table.remove(ClassLogTracker.logLines[class], 1)
   end
 
@@ -131,11 +131,9 @@ function ClassLogTracker:CreateUI()
     local col = mod(i-1, buttonsPerRow)
     btn:SetPoint("TOPLEFT", startX + col*spacingX, startY - row*spacingY)
 
-    -- color the label
     local r,g,b = unpack(classColors[class])
     btn:GetFontString():SetTextColor(r, g, b)
 
-    -- bind class to this button
     btn.class = class
     btn:SetScript("OnClick", function(self)
       ClassLogTracker.selectedClass = self.class
@@ -143,7 +141,6 @@ function ClassLogTracker:CreateUI()
     end)
   end
 
-  -- scrolling text area
   local scroll = CreateFrame("ScrollFrame", "ClassLogScroll", f, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 10, -120)
   scroll:SetPoint("BOTTOMRIGHT", -30, 10)
@@ -153,7 +150,7 @@ function ClassLogTracker:CreateUI()
   text:SetFontObject(ChatFontNormal)
   text:SetWidth(540)
   text:SetAutoFocus(false)
-  text:SetScript("OnEscapePressed", text.ClearFocus)
+  text:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 
   scroll:SetScrollChild(text)
 
@@ -173,23 +170,26 @@ function ClassLogTracker:OnEvent(...)
   AddLogLine(msg, sender)
 end
 
--- hook combat/spell chat events
 local eventFrame = CreateFrame("Frame")
 local events = {
-  "CHAT_MSG_SPELL_SELF_BUFF",      "CHAT_MSG_SPELL_SELF_DAMAGE",
-  "CHAT_MSG_SPELL_AURA_GONE_SELF", "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "CHAT_MSG_COMBAT_SELF_HITS",
-  "CHAT_MSG_SPELL_PARTY_BUFF",     "CHAT_MSG_SPELL_PARTY_DAMAGE",
+  "CHAT_MSG_SPELL_SELF_BUFF","CHAT_MSG_SPELL_SELF_DAMAGE",
+  "CHAT_MSG_SPELL_AURA_GONE_SELF","CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS",
+  "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE","CHAT_MSG_COMBAT_SELF_HITS",
+  "CHAT_MSG_SPELL_PARTY_BUFF","CHAT_MSG_SPELL_PARTY_DAMAGE",
   "CHAT_MSG_SPELL_AURA_GONE_PARTY","CHAT_MSG_SPELL_PERIODIC_PARTY_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", "CHAT_MSG_COMBAT_PARTY_HITS",
-  "CHAT_MSG_SPELL_FRIENDLYPLAYER_BUFF",   "CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE",
-  "CHAT_MSG_SPELL_AURA_GONE_FRIENDLYPLAYER","CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE","CHAT_MSG_COMBAT_FRIENDLYPLAYER_HITS",
+  "CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE","CHAT_MSG_COMBAT_PARTY_HITS",
+  "CHAT_MSG_SPELL_FRIENDLYPLAYER_BUFF","CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE",
+  "CHAT_MSG_SPELL_AURA_GONE_FRIENDLYPLAYER",
+  "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS",
+  "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE",
+  "CHAT_MSG_COMBAT_FRIENDLYPLAYER_HITS",
 }
 for _, evt in ipairs(events) do
   eventFrame:RegisterEvent(evt)
 end
-eventFrame:SetScript("OnEvent", function(_, _, ...) ClassLogTracker:OnEvent(...) end)
+eventFrame:SetScript("OnEvent", function(_, _, ...)
+  ClassLogTracker:OnEvent(...)
+end)
 
 DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
 
