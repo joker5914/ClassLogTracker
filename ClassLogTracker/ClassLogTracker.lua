@@ -155,13 +155,24 @@ function ClassLogTracker:CreateUI()
 end
 
 -- now OnEvent explicitly takes msg, sender, no `...` in its signature
+-- replace your current OnEvent with this
+
 function ClassLogTracker:OnEvent(msg, sender)
+  -- ignore events that didn’t pass a chat message
+  if type(msg) ~= "string" or msg == "" then
+    return
+  end
+
+  -- if sender is blank but it was you, fix it
   if (not sender or sender == "") and msg:find("^You ") then
     sender = UnitName("player")
   elseif not sender or sender == "" then
     return
   end
+
+  -- strip server-suffix
   sender = sender:match("^[^-]+")
+
   AddLogLine(msg, sender)
 end
 
