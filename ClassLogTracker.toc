@@ -5,15 +5,6 @@
 ## Version: 1.0.1
 ## SavedVariables: 
 
-## first load LibStub so LibStub global exists
-Libs/LibStub/LibStub.lua
+## Dependencies: AceGUI-3.0
 
-## then AceGUI
-Libs/AceGUI-3.0/AceGUI-3.0.xml
-Libs/AceGUI-3.0/AceGUI-3.0.lua
-Libs/AceGUI-3.0/widgets/AceGUIWidget-Button.lua
-Libs/AceGUI-3.0/widgets/AceGUIContainer-ScrollFrame.lua
-Libs/AceGUI-3.0/widgets/AceGUIWidget-MultiLineEditBox.lua
-
-## finally your code
 ClassLogTracker.lua
