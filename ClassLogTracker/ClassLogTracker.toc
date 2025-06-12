@@ -5,4 +5,15 @@
 ## Version: 1.0
 ## SavedVariables: 
 
+Libs/LibStub/LibStub.lua
+
+Libs/AceEvent-3.0/AceEvent-3.0.xml
+Libs/AceEvent-3.0/AceEvent-3.0.lua
+
+Libs/AceGUI-3.0/AceGUI-3.0.xml
+Libs/AceGUI-3.0/AceGUI-3.0.lua
+Libs/AceGUI-3.0/AceGUIWidget-ScrollFrame.lua
+Libs/AceGUI-3.0/AceGUIWidget-Button.lua
+…  (etc, all the AceGUIWidget-*.lua files)
+
 ClassLogTracker.lua
