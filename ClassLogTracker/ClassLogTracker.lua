@@ -184,8 +184,8 @@ for _, evt in ipairs(events) do
 end
 
 -- forward arg1, arg2 into our OnEvent
-eventFrame:SetScript("OnEvent", function(_, _, ...)
-  ClassLogTracker:OnEvent(...)
+eventFrame:SetScript("OnEvent", function(self, event, msg, sender)
+  ClassLogTracker:OnEvent(msg, sender)
 end)
 
 DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
