@@ -7,7 +7,7 @@ ClassLogTracker.selectedClass = nil
 ClassLogTracker.logLines = {}
 ClassLogTracker.filterType = "party"
 
-local mod = math.mod or function(a, b) return a - math.floor(a / b) * b end
+local mod = math.fmod or function(a, b) return a - math.floor(a / b) * b end
 
 local function normalized(name)
   if not name then return "" end
