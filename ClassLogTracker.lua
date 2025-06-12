@@ -4,7 +4,6 @@
 local LibStub = _G.LibStub
 local AceGUI = LibStub("AceGUI-3.0")
 
--- main table
 ClassLogTracker = {}
 local CLT = ClassLogTracker
 
