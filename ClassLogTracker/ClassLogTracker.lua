@@ -171,14 +171,32 @@ function ClassLogTracker:OnEvent()
 end
 
 local eventFrame = CreateFrame("Frame")
+
+-- Self events
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
+
+-- Party events
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PARTY_BUFF")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PARTY_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_BUFFS")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_COMBAT_PARTY_HITS")
-eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE")
+
+-- Friendly non-party players
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_FRIENDLYPLAYER_BUFF")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE")
-eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
-eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_FRIENDLYPLAYER")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_COMBAT_FRIENDLYPLAYER_HITS")
+
+-- Hook into handler
 eventFrame:SetScript("OnEvent", function() ClassLogTracker:OnEvent() end)
 
 DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
