@@ -1,7 +1,7 @@
 -- ClassLogTracker.lua
 
 -- grab AceGUI (LibStub must already be loaded via your TOC)
-local AceGUI = LibStub:GetLibrary("AceGUI-3.0")
+local AceGUI = LibStub("AceGUI-3.0")
 
 ClassLogTracker = {}
 local CLT = ClassLogTracker
