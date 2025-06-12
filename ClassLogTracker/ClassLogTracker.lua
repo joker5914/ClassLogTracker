@@ -7,8 +7,6 @@ ClassLogTracker.selectedClass = nil
 ClassLogTracker.logLines = {}
 ClassLogTracker.filterType = "party"
 
-local strmatch = string.match
-
 local function mod(a, b)
   return a - math.floor(a / b) * b
 end
@@ -59,8 +57,6 @@ local function AddLogLine(msg, sender)
 
   ClassLogTracker.logLines[class] = ClassLogTracker.logLines[class] or {}
   table.insert(ClassLogTracker.logLines[class], msg)
-
-  -- keep only the last 200 entries
   if table.getn(ClassLogTracker.logLines[class]) > 200 then
     table.remove(ClassLogTracker.logLines[class], 1)
   end
@@ -120,7 +116,6 @@ function ClassLogTracker:CreateUI()
   filter:SetScript("OnClick", function() ClassLogTracker:ToggleFilterType() end)
   self.filterButton = filter
 
-  -- class buttons
   local buttonsPerRow, spacingX, spacingY = 6, 85, 26
   local startX, startY = 10, -40
   for i, class in ipairs(classList) do
@@ -159,8 +154,8 @@ function ClassLogTracker:CreateUI()
   self.textFrame   = text
 end
 
-function ClassLogTracker:OnEvent(...)
-  local msg, sender = ...
+-- now OnEvent explicitly takes msg, sender, no `...` in its signature
+function ClassLogTracker:OnEvent(msg, sender)
   if (not sender or sender == "") and msg:find("^You ") then
     sender = UnitName("player")
   elseif not sender or sender == "" then
@@ -187,6 +182,8 @@ local events = {
 for _, evt in ipairs(events) do
   eventFrame:RegisterEvent(evt)
 end
+
+-- forward arg1, arg2 into our OnEvent
 eventFrame:SetScript("OnEvent", function(_, _, ...)
   ClassLogTracker:OnEvent(...)
 end)
