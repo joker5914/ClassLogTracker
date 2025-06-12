@@ -35,7 +35,8 @@ local classColors = {
 
 local function GetClassByName(name)
   name = normalized(name)
-  if normalized(UnitName("player")) == name then
+  DEFAULT_CHAT_FRAME:AddMessage("GetClassByName input: " .. (name or "nil"))
+  if normalized(UnitName("player") or "") == name then
     return UnitClass("player")
   end
   for i = 1, 4 do
@@ -53,6 +54,7 @@ end
 
 local function AddLogLine(msg, sender)
   local class = GetClassByName(sender)
+  DEFAULT_CHAT_FRAME:AddMessage("Logging class: " .. (class or "nil"))
   if class then
     if not ClassLogTracker.logLines[class] then
       ClassLogTracker.logLines[class] = {}
@@ -130,7 +132,7 @@ function ClassLogTracker:CreateUI()
     btn:SetHeight(22)
     btn:SetText(class)
     local row = math.floor((i - 1) / buttonsPerRow)
-    local col = (i - 1) - row * buttonsPerRow
+    local col = (i - 1) % buttonsPerRow
     btn:SetPoint("TOPLEFT", f, "TOPLEFT", startX + col * buttonSpacingX, startY - row * buttonSpacingY)
     local r, g, b = unpack(classColors[class])
     btn:GetFontString():SetTextColor(r, g, b)
@@ -161,11 +163,13 @@ function ClassLogTracker:OnEvent()
   local msg = arg1
   local sender = arg2
 
-  -- Handle cases like "You gain X"
+  DEFAULT_CHAT_FRAME:AddMessage("MSG: " .. msg)
+  DEFAULT_CHAT_FRAME:AddMessage("SENDER: " .. (sender or "nil"))
+
   if (not sender or sender == "") and string.find(msg, "^You ") then
     sender = UnitName("player")
   elseif not sender or sender == "" then
-    return -- skip unidentifiable logs
+    return
   end
 
   if sender and msg then
@@ -174,32 +178,24 @@ function ClassLogTracker:OnEvent()
 end
 
 local eventFrame = CreateFrame("Frame")
-
--- Self events
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
-
--- Party events
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PARTY_BUFF")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PARTY_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_PARTY")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_BUFFS")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_COMBAT_PARTY_HITS")
-
--- Friendly non-party players
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_FRIENDLYPLAYER_BUFF")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_FRIENDLYPLAYER")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_COMBAT_FRIENDLYPLAYER_HITS")
-
--- Hook into handler
 eventFrame:SetScript("OnEvent", function() ClassLogTracker:OnEvent() end)
 
 DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
