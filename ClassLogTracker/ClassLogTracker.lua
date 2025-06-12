@@ -114,21 +114,26 @@ function ClassLogTracker:CreateUI()
   f:SetScript("OnDragStart", function() f:StartMoving() end)
   f:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
 
-  -- close button
-  local close = CreateFrame("Button",nil,f,"UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
-  close:SetScript("OnClick", function() f:Hide() end)
+  -- ChatLog toggle button
+  local chatToggle = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  chatToggle:SetWidth(120); chatToggle:SetHeight(22)
+  chatToggle:SetText("ChatLog")
+  chatToggle:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
+  chatToggle:SetScript("OnClick", function()
+    -- this runs /chatlog under the hood
+    SlashCmdList["CHATLOG"]("")
+  end)
 
-  -- filter toggle
+  -- filter toggle (moved right of ChatLog)
   local filter = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   filter:SetWidth(120); filter:SetHeight(22)
   filter:SetText("Filter: party")
-  filter:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
-  filter:SetScript("OnClick", function() ClassLogTracker:ToggleFilterType() end)
+  filter:SetPoint("TOPLEFT", f, "TOPLEFT", 140, -10)
+  filter:SetScript("OnClick",function() ClassLogTracker:ToggleFilterType() end)
   self.filterButton = filter
 
   -- class buttons
-  local perRow, sx, sy = 6, 85, 26
+  local perRow, sx, sy = 6,85,26
   local ox, oy = 10, -40
   for i, cls in ipairs(classList) do
     local btn = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
@@ -168,7 +173,7 @@ function ClassLogTracker:CreateUI()
   self.textFrame   = text
 end
 
--- explicit params, no varargs (still available but unused)
+-- explicit params, no varargs
 function ClassLogTracker:OnEvent(msg, sender)
   if type(msg)~="string" or msg=="" then return end
   if (not sender or sender=="") and msg:find("^You ") then
@@ -180,39 +185,45 @@ function ClassLogTracker:OnEvent(msg, sender)
   AddLogLine(msg, sender)
 end
 
--- replace all CHAT_MSG_* registration with raw combat log hook
+-- raw combat‐log hook from earlier
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 eventFrame:SetScript("OnEvent", function(_, event)
   if event ~= "COMBAT_LOG_EVENT_UNFILTERED" then return end
 
   local _, subEvent,
-        _, sourceName = CombatLogGetCurrentEventInfo()
+        _, srcGUID, srcName,
+        _, _,
+        dstGUID, dstName,
+        _, _,
+        spellId, spellName = CombatLogGetCurrentEventInfo()
 
-  if not sourceName then return end
+  if not srcName then return end
+  local class = GetClassByName(srcName)
+  if not class then return end
 
-  -- only these sub-events
-  if subEvent == "SPELL_CAST_SUCCESS"
-  or subEvent == "SPELL_HEAL"
-  or subEvent == "SPELL_PERIODIC_HEAL"
-  or subEvent == "SPELL_AURA_APPLIED" then
-
-    -- build a brief message
-    local timestamp, _, _, srcGUID, srcName, _, _,
-          dstGUID, dstName, _, _, spellId, spellName =
-      CombatLogGetCurrentEventInfo()
-
-    local msgText
-    if subEvent == "SPELL_CAST_SUCCESS" then
-      msgText = spellName .. " → " .. (dstName or "unknown")
-    elseif subEvent:find("HEAL") then
-      msgText = spellName .. " healed " .. (dstName or "unknown")
+  local msgText
+  if subEvent == "SPELL_CAST_SUCCESS" then
+    msgText = spellName.." → "..(dstName or "unknown")
+  elseif subEvent:find("HEAL") then
+    msgText = spellName.." healed "..(dstName or "unknown")
+  elseif subEvent == "SPELL_AURA_APPLIED" then
+    if srcName == UnitName("player") then
+      msgText = "You gain "..spellName
     else
-      msgText = spellName .. " applied to " .. (dstName or "unknown")
+      msgText = spellName.." applied to "..(dstName or "unknown")
     end
-
-    AddLogLine(msgText, srcName)
+  elseif subEvent == "SPELL_AURA_REMOVED" then
+    if dstName == UnitName("player") then
+      msgText = spellName.." fades from you"
+    else
+      msgText = spellName.." fades from "..(dstName or "unknown")
+    end
+  else
+    return
   end
+
+  AddLogLine(msgText, srcName)
 end)
 
 DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
