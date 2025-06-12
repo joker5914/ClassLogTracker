@@ -1,190 +1,177 @@
--- ClassLogTracker Addon
-ClassLogTracker = {}
-ClassLogTracker.frame         = nil
-ClassLogTracker.scrollFrame   = nil
-ClassLogTracker.textFrame     = nil
-ClassLogTracker.selectedClass = nil
-ClassLogTracker.logLines      = {}
-ClassLogTracker.filterType    = "party"
+-- ClassLogTracker Addon (AceGUI version)
+local ADDON, ns = ...
+local L = {}  -- for localization later
 
-local function mod(a,b) return a - math.floor(a/b)*b end
-local function normalized(name)
-  if not name then return "" end
-  return string.lower(string.gsub(name, "[^%a]", ""))
-end
+local AceGUI = LibStub("AceGUI-3.0")
+local EventFrame = CreateFrame("Frame")
 
 local classList = {
   "Warrior","Paladin","Priest","Rogue","Warlock",
   "Mage","Shaman","Druid","Hunter"
 }
+
 local classColors = {
   Warrior={1,0.78,0.55}, Paladin={0.96,0.55,0.73}, Priest={1,1,1},
   Rogue={1,0.96,0.41}, Warlock={0.58,0.51,0.79}, Mage={0.41,0.8,0.94},
   Shaman={0,0.44,0.87}, Druid={1,0.49,0.04}, Hunter={0.67,0.83,0.45},
 }
 
+local function normalized(name)
+  return name and name:lower():gsub("[^a-z]","") or ""
+end
+
 local function GetClassByName(name)
-  name = normalized(name)
-  if normalized(UnitName("player") or "")==name then return UnitClass("player") end
+  local n = normalized(name)
+  if normalized(UnitName("player") or "")==n then
+    return UnitClass("player")
+  end
   for i=1,4 do
-    if normalized(UnitName("party"..i))==name then return UnitClass("party"..i) end
+    if normalized(UnitName("party"..i))==n then return UnitClass("party"..i) end
   end
   for i=1,40 do
-    if normalized(UnitName("raid"..i))==name then return UnitClass("raid"..i) end
-  end
-  return nil
-end
-
-local function AddLogLine(msg, sender)
-  local class = GetClassByName(sender)
-  if not class then return end
-  ClassLogTracker.logLines[class] = ClassLogTracker.logLines[class] or {}
-  table.insert(ClassLogTracker.logLines[class], msg)
-  if table.getn(ClassLogTracker.logLines[class])>200 then
-    table.remove(ClassLogTracker.logLines[class],1)
-  end
-  if class==ClassLogTracker.selectedClass then
-    ClassLogTracker:UpdateLogText()
+    if normalized(UnitName("raid"..i))==n then return UnitClass("raid"..i) end
   end
 end
 
-function ClassLogTracker:UpdateLogText()
-  if not self.textFrame then return end
-  local c = self.selectedClass
-  if not c or not self.logLines[c] then
-    self.textFrame:SetText("No data for this class.")
+-- store per-class buffers
+local logBuffers = {}
+local selectedClass = nil
+local filterType = "party"
+
+-- create or update the AceGUI window
+local gui
+local outputBox
+function ns:ShowUI()
+  if gui then
+    gui:Show()
     return
   end
-  self.textFrame:SetText(table.concat(self.logLines[c], "\n"))
-end
 
-function ClassLogTracker:ToggleFilterType()
-  self.filterType = (self.filterType=="party") and "raid" or "party"
-  self.filterButton:SetText("Filter: "..self.filterType)
-end
+  gui = AceGUI:Create("Frame")
+  gui:SetTitle("Class Log Tracker")
+  gui:SetStatusText("Click a class to filter, or toggle chatlog")
+  gui:SetCallback("OnClose", function(widget) AceGUI:Release(widget) gui=nil end)
+  gui:SetLayout("Flow")
+  gui:SetWidth(650); gui:SetHeight(520)
 
-function ClassLogTracker:CreateUI()
-  if self.frame then self.frame:Show() return end
-  self.logLines = {}
+  -- Header group: ChatLog & Filter
+  local header = AceGUI:Create("InlineGroup")
+  header:SetTitle("Features")
+  header:SetFullWidth(true)
+  header:SetLayout("Flow")
 
-  local f = CreateFrame("Frame","ClassLogTrackerFrame",UIParent)
-  f:SetBackdrop{
-    bgFile="Interface/Tooltips/UI-Tooltip-Background",
-    edgeFile="Interface/Tooltips/UI-Tooltip-Border",
-    tile=true, tileSize=16, edgeSize=16,
-    insets={left=4,right=4,top=4,bottom=4},
-  }
-  f:SetBackdropColor(0,0,0,0.9)
-  f:SetWidth(600); f:SetHeight(500)
-  f:SetPoint("CENTER",UIParent,"CENTER",0,0)
-  f:EnableMouse(true); f:RegisterForDrag("LeftButton"); f:SetMovable(true)
-  f:SetScript("OnDragStart",function()f:StartMoving()end)
-  f:SetScript("OnDragStop",function()f:StopMovingOrSizing()end)
+  local chatBtn = AceGUI:Create("Button")
+  chatBtn:SetText("ChatLog")
+  chatBtn:SetWidth(100)
+  chatBtn:SetCallback("OnClick", function() SlashCmdList["CHATLOG"]("") end)
+  header:AddChild(chatBtn)
 
-  -- ChatLog toggle
-  local chatToggle = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-  chatToggle:SetSize(120,22)
-  chatToggle:SetText("ChatLog")
-  chatToggle:SetPoint("TOPLEFT",f,"TOPLEFT",10,-10)
-  chatToggle:SetScript("OnClick",function()
-    SlashCmdList["CHATLOG"]("")
+  local filterBtn = AceGUI:Create("Button")
+  filterBtn:SetText("Filter: "..filterType)
+  filterBtn:SetWidth(100)
+  filterBtn:SetCallback("OnClick", function()
+    filterType = (filterType=="party" and "raid" or "party")
+    filterBtn:SetText("Filter: "..filterType)
   end)
+  header:AddChild(filterBtn)
 
-  -- Filter toggle
-  local filter = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-  filter:SetSize(120,22)
-  filter:SetText("Filter: party")
-  filter:SetPoint("TOPLEFT",f,"TOPLEFT",140,-10)
-  filter:SetScript("OnClick",function()ClassLogTracker:ToggleFilterType()end)
-  self.filterButton = filter
+  gui:AddChild(header)
 
-  -- separator below header
-  local headerSep = f:CreateTexture(nil,"ARTWORK")
-  headerSep:SetColorTexture(1,1,1,0.25)
-  headerSep:SetHeight(2)
-  headerSep:SetPoint("TOPLEFT",f,"TOPLEFT",5,-35)
-  headerSep:SetPoint("TOPRIGHT",f,"TOPRIGHT",-5,-35)
+  -- Classes group
+  local classGroup = AceGUI:Create("InlineGroup")
+  classGroup:SetTitle("Classes")
+  classGroup:SetFullWidth(true)
+  classGroup:SetLayout("Flow")
 
-  -- class buttons
-  local perRow,sx,sy=6,85,26
-  local ox,oy=10,-40
-  for i,cls in ipairs(classList) do
-    local btn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-    btn:SetSize(80,22)
-    btn:SetText(cls)
-    local row,col=math.floor((i-1)/perRow),mod(i-1,perRow)
-    btn:SetPoint("TOPLEFT",f,"TOPLEFT",ox+col*sx,oy-row*sy)
-    local r,g,b=unpack(classColors[cls])
-    btn:GetFontString():SetTextColor(r,g,b)
-    do
-      local thisClass=cls
-      btn:SetScript("OnClick",function()
-        ClassLogTracker.selectedClass=thisClass
-        ClassLogTracker:UpdateLogText()
-      end)
-    end
+  for _,cls in ipairs(classList) do
+    local b = AceGUI:Create("Button")
+    b:SetText(cls)
+    b:SetWidth(80)
+    local r,g,bc = unpack(classColors[cls])
+    b:SetColor(r,g,bc)
+    b:SetCallback("OnClick", function()
+      selectedClass = cls
+      -- update output
+      local buf = logBuffers[cls] or {}
+      if #buf==0 then
+        outputBox:SetText("No data for "..cls)
+      else
+        outputBox:SetText(table.concat(buf, "\n"))
+      end
+    end)
+    classGroup:AddChild(b)
   end
 
-  -- separator above output
-  local classSep = f:CreateTexture(nil,"ARTWORK")
-  classSep:SetColorTexture(1,1,1,0.25)
-  classSep:SetHeight(2)
-  classSep:SetPoint("TOPLEFT",f,"TOPLEFT",5,-100)
-  classSep:SetPoint("TOPRIGHT",f,"TOPRIGHT",-5,-100)
+  gui:AddChild(classGroup)
 
-  -- scrollable output
-  local scroll=CreateFrame("ScrollFrame","ClassLogScroll",f,"UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT",f,"TOPLEFT",10,-120)
-  scroll:SetPoint("BOTTOMRIGHT",f,"BOTTOMRIGHT",-30,10)
-  local text=CreateFrame("EditBox",nil,scroll)
-  text:SetMultiLine(true); text:SetFontObject(ChatFontNormal)
-  text:SetWidth(540); text:SetAutoFocus(false)
-  text:SetScript("OnEscapePressed",function(self)self:ClearFocus()end)
-  scroll:SetScrollChild(text)
+  -- Output area
+  local outGroup = AceGUI:Create("InlineGroup")
+  outGroup:SetTitle("Log Output")
+  outGroup:SetFullWidth(true)
+  outGroup:SetHeight(350)
+  outGroup:SetLayout("Fill")
 
-  self.frame=f; self.scrollFrame=scroll; self.textFrame=text
+  outputBox = AceGUI:Create("MultiLineEditBox")
+  outputBox:DisableButton(true)
+  outputBox:SetFullWidth(true)
+  outputBox:SetFullHeight(true)
+  outputBox:SetText("No data yet...")
+  outGroup:AddChild(outputBox)
+
+  gui:AddChild(outGroup)
 end
 
-function ClassLogTracker:OnEvent(msg,sender)
-  if type(msg)~="string" or msg=="" then return end
-  if (not sender or sender=="") and msg:find("^You ") then
-    sender=UnitName("player")
-  elseif not sender or sender=="" then return end
-  sender=sender:match("^[^-]+")
-  AddLogLine(msg,sender)
-end
-
--- raw combat-log hook + debug
-local eventFrame=CreateFrame("Frame")
-eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-eventFrame:SetScript("OnEvent",function(_,event)
-  if event~="COMBAT_LOG_EVENT_UNFILTERED" then return end
-  local _,subEvent,_,srcGUID,srcName,_,_,dstGUID,dstName,_,_,spellId,spellName=
+-- handle combat log events (same filters as before)
+EventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+EventFrame:SetScript("OnEvent", function(self, event)
+  local _, subEvent, _, srcGUID, srcName, _, _, dstGUID, dstName, _, _, spellId, spellName =
     CombatLogGetCurrentEventInfo()
-  -- debug print
-  DEFAULT_CHAT_FRAME:AddMessage(
-    "|cff88ff00[CLT Debug]|r subEvent="..tostring(subEvent)..
-    " src="..tostring(srcName).." dst="..tostring(dstName)
-  )
   if not srcName then return end
+
+  -- only track party/raid
   if not GetClassByName(srcName) then return end
 
-  local msgText
-  if subEvent=="SPELL_CAST_SUCCESS" then
-    msgText=spellName.." → "..(dstName or "unknown")
-  elseif subEvent:find("HEAL") then
-    msgText=spellName.." healed "..(dstName or "unknown")
-  elseif subEvent=="SPELL_AURA_APPLIED" then
-    msgText=(srcName==UnitName("player") and "You gain "..spellName)
-         or (spellName.." applied to "..(dstName or "unknown"))
-  elseif subEvent=="SPELL_AURA_REMOVED" then
-    msgText=(dstName==UnitName("player") and spellName.." fades from you")
-         or (spellName.." fades from "..(dstName or "unknown"))
-  else return end
+  -- only these subEvents
+  if subEvent~="SPELL_CAST_SUCCESS"
+  and not subEvent:find("HEAL")
+  and subEvent~="SPELL_AURA_APPLIED"
+  and subEvent~="SPELL_AURA_REMOVED" then
+    return
+  end
 
-  AddLogLine(msgText,srcName)
+  -- skip out-of-party based on filterType
+  local unit = (filterType=="party" and "party") or "raid"
+  if not UnitInParty(srcName) and filterType=="party" then return end
+  if not UnitInRaid(srcName) and filterType=="raid" then return end
+
+  -- build message
+  local msg
+  if subEvent=="SPELL_CAST_SUCCESS" then
+    msg = spellName.." → "..(dstName or "?")
+  elseif subEvent:find("HEAL") then
+    msg = spellName.." healed "..(dstName or "?")
+  elseif subEvent=="SPELL_AURA_APPLIED" then
+    msg = (srcName==UnitName("player") and "You gain "..spellName)
+      or (spellName.." applied to "..(dstName or "?"))
+  else -- REMOVED
+    msg = spellName.." fades from "..(dstName or "?")
+  end
+
+  -- stash
+  local cls = GetClassByName(srcName)
+  logBuffers[cls] = logBuffers[cls] or {}
+  table.insert(logBuffers[cls], msg)
+  if #logBuffers[cls] > 200 then
+    table.remove(logBuffers[cls], 1)
+  end
+
+  -- if currently selected, update live
+  if gui and selectedClass==cls then
+    outputBox:SetText(table.concat(logBuffers[cls], "\n"))
+  end
 end)
 
-DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
-SLASH_CLASSLOG1="/classlog"
-SlashCmdList["CLASSLOG"]=function() ClassLogTracker:CreateUI() end
+SLASH_CLASSLOG1 = "/classlog"
+SlashCmdList["CLASSLOG"] = function()
+  ns:ShowUI()
+end
