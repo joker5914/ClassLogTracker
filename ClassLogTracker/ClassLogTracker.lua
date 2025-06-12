@@ -60,7 +60,11 @@ local function AddLogLine(msg, sender)
       ClassLogTracker.logLines[class] = {}
     end
     table.insert(ClassLogTracker.logLines[class], msg)
-    if #ClassLogTracker.logLines[class] > 200 then
+      -- Trim log to last 200 entries
+      if table.getn(ClassLogTracker.logLines[class]) > 200 then
+        table.remove(ClassLogTracker.logLines[class], 1)
+      end
+    if table.getn(ClassLogTracker.logLines[class]) > 200 then
       table.remove(ClassLogTracker.logLines[class], 1)
     end
     if class == ClassLogTracker.selectedClass then
