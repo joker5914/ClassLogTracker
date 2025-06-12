@@ -7,6 +7,8 @@ ClassLogTracker.selectedClass = nil
 ClassLogTracker.logLines = {}
 ClassLogTracker.filterType = "party"
 
+local strmatch = string.match
+
 local function mod(a, b)
   return a - math.floor(a / b) * b
 end
@@ -167,7 +169,7 @@ function ClassLogTracker:OnEvent()
     return
   end
 
-  sender = string.match(sender, "([^%-]+)")
+  sender = strmatch(sender, "([^%-]+)")
 
   if sender and msg then
     AddLogLine(msg, sender)
