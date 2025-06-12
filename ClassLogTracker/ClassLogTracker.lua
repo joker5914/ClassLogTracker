@@ -158,12 +158,14 @@ function ClassLogTracker:CreateUI()
 end
 
 function ClassLogTracker:OnEvent()
-  local msg, sender = arg1, arg2
-  if not msg then return end
+  local msg = arg1
+  local sender = arg2
 
-  -- Handle self-cast logs like "You gain X"
+  -- Handle cases like "You gain X"
   if (not sender or sender == "") and string.find(msg, "^You ") then
     sender = UnitName("player")
+  elseif not sender or sender == "" then
+    return -- skip unidentifiable logs
   end
 
   if sender and msg then
