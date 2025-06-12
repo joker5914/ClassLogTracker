@@ -5,16 +5,15 @@
 ## Version: 1.0.1
 ## SavedVariables: 
 
-## embed Libs
+## embed LibStub
 Libs/LibStub/LibStub.lua
 
-## embed AceGUI-3.0
+## embed AceGUI
 Libs/AceGUI-3.0/AceGUI-3.0.xml
 Libs/AceGUI-3.0/AceGUI-3.0.lua
 Libs/AceGUI-3.0/AceGUIWidget-Button.lua
 Libs/AceGUI-3.0/AceGUIWidget-ScrollFrame.lua
 Libs/AceGUI-3.0/AceGUIWidget-MultiLineEditBox.lua
--- (etc; only the widgets you actually use)
 
-## then your code
+## then your addon
 ClassLogTracker.lua
