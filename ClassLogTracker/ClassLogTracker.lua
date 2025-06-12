@@ -9,6 +9,11 @@ ClassLogTracker.filterType = "party"
 
 local mod = math.mod or function(a, b) return a - math.floor(a / b) * b end
 
+local function normalized(name)
+  if not name then return "" end
+  return string.lower(string.gsub(name, "%s+", ""))
+end
+
 local classList = {
   "Warrior", "Paladin", "Priest", "Rogue", "Warlock",
   "Mage", "Shaman", "Druid", "Hunter"
@@ -27,16 +32,17 @@ local classColors = {
 }
 
 local function GetClassByName(name)
-  if UnitName("player") == name then
+  name = normalized(name)
+  if normalized(UnitName("player")) == name then
     return UnitClass("player")
   end
   for i = 1, 4 do
-    if UnitName("party" .. i) == name then
+    if normalized(UnitName("party" .. i)) == name then
       return UnitClass("party" .. i)
     end
   end
   for i = 1, 40 do
-    if UnitName("raid" .. i) == name then
+    if normalized(UnitName("raid" .. i)) == name then
       return UnitClass("raid" .. i)
     end
   end
@@ -45,6 +51,7 @@ end
 
 local function AddLogLine(msg, sender)
   local class = GetClassByName(sender)
+  DEFAULT_CHAT_FRAME:AddMessage("LOG: " .. msg .. " [" .. (class or "unknown") .. "]")
   if class then
     if not ClassLogTracker.logLines[class] then
       ClassLogTracker.logLines[class] = {}
@@ -58,7 +65,6 @@ local function AddLogLine(msg, sender)
     end
   end
 end
-
 
 function ClassLogTracker:UpdateLogText()
   if not self.textFrame then return end
@@ -112,13 +118,13 @@ function ClassLogTracker:CreateUI()
   filter:SetScript("OnClick", function() ClassLogTracker:ToggleFilterType() end)
   self.filterButton = filter
 
-  local y = -40
+  local xStart = 10
   for i, class in ipairs(classList) do
     local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     btn:SetWidth(80)
     btn:SetHeight(22)
     btn:SetText(class)
-    btn:SetPoint("TOPLEFT", f, "TOPLEFT", 10 + mod((i - 1), 3) * 90, y - math.floor((i - 1) / 3) * 26)
+    btn:SetPoint("TOPLEFT", f, "TOPLEFT", xStart + (i - 1) * 85, -40)
     local r, g, b = unpack(classColors[class])
     btn:GetFontString():SetTextColor(r, g, b)
     btn:SetScript("OnClick", function()
@@ -128,7 +134,7 @@ function ClassLogTracker:CreateUI()
   end
 
   local scroll = CreateFrame("ScrollFrame", "ClassLogScroll", f, "UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -140)
+  scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -80)
   scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -30, 10)
 
   local text = CreateFrame("EditBox", nil, scroll)
@@ -147,11 +153,7 @@ end
 function ClassLogTracker:OnEvent()
   local msg, sender = arg1, arg2
   if sender and msg then
-    if self.filterType == "party" and UnitInParty(sender) then
-      AddLogLine(msg, sender)
-    elseif self.filterType == "raid" and UnitInRaid(sender) then
-      AddLogLine(msg, sender)
-    end
+    AddLogLine(msg, sender)
   end
 end
 
@@ -162,6 +164,8 @@ eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_COMBAT_PARTY_HITS")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
 eventFrame:SetScript("OnEvent", function() ClassLogTracker:OnEvent() end)
 
 DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
