@@ -1,18 +1,16 @@
 -- ClassLogTracker Addon
 ClassLogTracker = {}
-ClassLogTracker.frame        = nil
-ClassLogTracker.scrollFrame  = nil
-ClassLogTracker.textFrame    = nil
+ClassLogTracker.frame         = nil
+ClassLogTracker.scrollFrame   = nil
+ClassLogTracker.textFrame     = nil
 ClassLogTracker.selectedClass = nil
-ClassLogTracker.logLines     = {}
-ClassLogTracker.filterType   = "party"
+ClassLogTracker.logLines      = {}
+ClassLogTracker.filterType    = "party"
 
--- simple modulo
 local function mod(a, b)
   return a - math.floor(a / b) * b
 end
 
--- strip non-letters and lowercase
 local function normalized(name)
   if not name then return "" end
   return string.lower(string.gsub(name, "[^%a]", ""))
@@ -35,7 +33,6 @@ local classColors = {
   Hunter  = {0.67,0.83,0.45},
 }
 
--- find class token for a unit name
 local function GetClassByName(name)
   name = normalized(name)
   if normalized(UnitName("player") or "") == name then
@@ -54,15 +51,12 @@ local function GetClassByName(name)
   return nil
 end
 
--- record a line under the right class
 local function AddLogLine(msg, sender)
   local class = GetClassByName(sender)
   if not class then return end
 
   ClassLogTracker.logLines[class] = ClassLogTracker.logLines[class] or {}
   table.insert(ClassLogTracker.logLines[class], msg)
-
-  -- trim history to 200
   if table.getn(ClassLogTracker.logLines[class]) > 200 then
     table.remove(ClassLogTracker.logLines[class], 1)
   end
@@ -72,7 +66,6 @@ local function AddLogLine(msg, sender)
   end
 end
 
--- redraw the editbox with the selected class’s log
 function ClassLogTracker:UpdateLogText()
   if not self.textFrame then return end
   local c = self.selectedClass
@@ -83,20 +76,18 @@ function ClassLogTracker:UpdateLogText()
   self.textFrame:SetText(table.concat(self.logLines[c], "\n"))
 end
 
--- toggle party vs raid filter label
 function ClassLogTracker:ToggleFilterType()
-  self.filterType = (self.filterType == "party") and "raid" or "party"
+  self.filterType = (self.filterType=="party") and "raid" or "party"
   self.filterButton:SetText("Filter: "..self.filterType)
 end
 
--- build or show the main UI
 function ClassLogTracker:CreateUI()
   if self.frame then
     self.frame:Show()
     return
   end
 
-  self.logLines = {}  -- reset on open
+  self.logLines = {}
 
   local f = CreateFrame("Frame","ClassLogTrackerFrame",UIParent)
   f:SetBackdrop({
@@ -106,56 +97,51 @@ function ClassLogTracker:CreateUI()
     insets   = {left=4,right=4,top=4,bottom=4},
   })
   f:SetBackdropColor(0,0,0,0.9)
-  f:SetWidth(600)
-  f:SetHeight(500)
-  f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-  f:EnableMouse(true)
-  f:RegisterForDrag("LeftButton")
-  f:SetMovable(true)
+  f:SetWidth(600); f:SetHeight(500)
+  f:SetPoint("CENTER",UIParent,"CENTER",0,0)
+  f:EnableMouse(true); f:RegisterForDrag("LeftButton"); f:SetMovable(true)
   f:SetScript("OnDragStart", function() f:StartMoving() end)
   f:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
 
-  -- close button
+  -- close
   local close = CreateFrame("Button",nil,f,"UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
+  close:SetPoint("TOPRIGHT",f,"TOPRIGHT",-4,-4)
   close:SetScript("OnClick", function() f:Hide() end)
 
   -- filter toggle
   local filter = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   filter:SetWidth(120); filter:SetHeight(22)
   filter:SetText("Filter: party")
-  filter:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
-  filter:SetScript("OnClick", function() ClassLogTracker:ToggleFilterType() end)
+  filter:SetPoint("TOPLEFT",f,"TOPLEFT",10,-10)
+  filter:SetScript("OnClick",function() ClassLogTracker:ToggleFilterType() end)
   self.filterButton = filter
 
   -- class buttons
-  local perRow, sx, sy = 6,85,26
+  local perRow, sx, sy = 6, 85, 26
   local ox, oy = 10, -40
   for i, cls in ipairs(classList) do
     local btn = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     btn:SetWidth(80); btn:SetHeight(22)
     btn:SetText(cls)
     local row = math.floor((i-1)/perRow)
-    local col = mod(i-1, perRow)
-    btn:SetPoint(
-      "TOPLEFT",
-      f, "TOPLEFT",
-      ox + col*sx,
-      oy - row*sy
-    )
+    local col = mod(i-1,perRow)
+    btn:SetPoint("TOPLEFT",f,"TOPLEFT",ox+col*sx,oy-row*sy)
+
     local r,g,b = unpack(classColors[cls])
     btn:GetFontString():SetTextColor(r,g,b)
+
     btn.class = cls
-    btn:SetScript("OnClick",function(self)
-      ClassLogTracker.selectedClass = self.class
-      ClassLogTracker:UpdateLogText()
+    -- <<< UPDATED OnClick: explicitly pass tracker into UpdateLogText
+    btn:SetScript("OnClick", function(btn)
+      ClassLogTracker.selectedClass = btn.class
+      ClassLogTracker.UpdateLogText(ClassLogTracker)
     end)
   end
 
-  -- scrollable log area
+  -- scroll area
   local scroll = CreateFrame("ScrollFrame","ClassLogScroll",f,"UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT",     f, "TOPLEFT",     10,  -120)
-  scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -30,    10)
+  scroll:SetPoint("TOPLEFT",     f,"TOPLEFT",     10,  -120)
+  scroll:SetPoint("BOTTOMRIGHT", f,"BOTTOMRIGHT", -30,    10)
 
   local text = CreateFrame("EditBox",nil,scroll)
   text:SetMultiLine(true)
@@ -170,10 +156,9 @@ function ClassLogTracker:CreateUI()
   self.textFrame   = text
 end
 
--- event handler: explicit params only
+-- explicit params, no varargs
 function ClassLogTracker:OnEvent(msg, sender)
-  -- drop nil or non-string
-  if type(msg) ~= "string" or msg == "" then return end
+  if type(msg)~="string" or msg=="" then return end
   if (not sender or sender=="") and msg:find("^You ") then
     sender = UnitName("player")
   elseif not sender or sender=="" then
@@ -183,7 +168,7 @@ function ClassLogTracker:OnEvent(msg, sender)
   AddLogLine(msg, sender)
 end
 
--- register combat/spell chat events
+-- register events
 local eventFrame = CreateFrame("Frame")
 for _, e in ipairs({
   "CHAT_MSG_SPELL_SELF_BUFF","CHAT_MSG_SPELL_SELF_DAMAGE",
@@ -200,9 +185,8 @@ for _, e in ipairs({
 }) do
   eventFrame:RegisterEvent(e)
 end
-
-eventFrame:SetScript("OnEvent", function(_, _, msg, sender)
-  ClassLogTracker:OnEvent(msg, sender)
+eventFrame:SetScript("OnEvent", function(_,_,msg,sender)
+  ClassLogTracker:OnEvent(msg,sender)
 end)
 
 DEFAULT_CHAT_FRAME:AddMessage("|cffe5b3e5ClassLogTracker Loaded. Type /classlog to open.|r")
