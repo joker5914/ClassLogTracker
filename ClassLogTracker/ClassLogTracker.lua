@@ -89,6 +89,7 @@ function ClassLogTracker:CreateUI()
 
   self.logLines = {}
 
+  -- main frame
   local f = CreateFrame("Frame", "ClassLogTrackerFrame", UIParent)
   f:SetBackdrop({
     bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
@@ -97,38 +98,42 @@ function ClassLogTracker:CreateUI()
     insets   = { left = 4, right = 4, top = 4, bottom = 4 },
   })
   f:SetBackdropColor(0,0,0,0.9)
-  f:SetSize(600, 500)
+  f:SetWidth(600)
+  f:SetHeight(500)
   f:SetPoint("CENTER")
-  f:SetMovable(true)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
+  f:SetMovable(true)
   f:SetScript("OnDragStart", function() f:StartMoving() end)
   f:SetScript("OnDragStop", function() f:StopMovingOrSizing() end)
 
+  -- close button
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -4, -4)
   close:SetScript("OnClick", function() f:Hide() end)
 
+  -- filter toggle
   local filter = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  filter:SetSize(120, 22)
+  filter:SetWidth(120)
+  filter:SetHeight(22)
   filter:SetText("Filter: party")
   filter:SetPoint("TOPLEFT", 10, -10)
   filter:SetScript("OnClick", function() ClassLogTracker:ToggleFilterType() end)
   self.filterButton = filter
 
+  -- class buttons
   local buttonsPerRow, spacingX, spacingY = 6, 85, 26
   local startX, startY = 10, -40
   for i, class in ipairs(classList) do
     local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    btn:SetSize(80, 22)
+    btn:SetWidth(80)
+    btn:SetHeight(22)
     btn:SetText(class)
     local row = math.floor((i-1)/buttonsPerRow)
     local col = mod(i-1, buttonsPerRow)
     btn:SetPoint("TOPLEFT", startX + col*spacingX, startY - row*spacingY)
-
     local r,g,b = unpack(classColors[class])
     btn:GetFontString():SetTextColor(r, g, b)
-
     btn.class = class
     btn:SetScript("OnClick", function(self)
       ClassLogTracker.selectedClass = self.class
@@ -136,6 +141,7 @@ function ClassLogTracker:CreateUI()
     end)
   end
 
+  -- scrollable text area
   local scroll = CreateFrame("ScrollFrame", "ClassLogScroll", f, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 10, -120)
   scroll:SetPoint("BOTTOMRIGHT", -30, 10)
@@ -154,30 +160,21 @@ function ClassLogTracker:CreateUI()
   self.textFrame   = text
 end
 
--- now OnEvent explicitly takes msg, sender, no `...` in its signature
--- replace your current OnEvent with this
-
+-- explicit parameters—no varargs
 function ClassLogTracker:OnEvent(msg, sender)
-  -- ignore events that didn’t pass a chat message
-  if type(msg) ~= "string" or msg == "" then
-    return
-  end
-
-  -- if sender is blank but it was you, fix it
+  if type(msg) ~= "string" or msg == "" then return end
   if (not sender or sender == "") and msg:find("^You ") then
     sender = UnitName("player")
   elseif not sender or sender == "" then
     return
   end
-
-  -- strip server-suffix
   sender = sender:match("^[^-]+")
-
   AddLogLine(msg, sender)
 end
 
+-- register events
 local eventFrame = CreateFrame("Frame")
-local events = {
+for _, evt in ipairs({
   "CHAT_MSG_SPELL_SELF_BUFF","CHAT_MSG_SPELL_SELF_DAMAGE",
   "CHAT_MSG_SPELL_AURA_GONE_SELF","CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS",
   "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE","CHAT_MSG_COMBAT_SELF_HITS",
@@ -189,13 +186,11 @@ local events = {
   "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS",
   "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE",
   "CHAT_MSG_COMBAT_FRIENDLYPLAYER_HITS",
-}
-for _, evt in ipairs(events) do
+}) do
   eventFrame:RegisterEvent(evt)
 end
 
--- forward arg1, arg2 into our OnEvent
-eventFrame:SetScript("OnEvent", function(self, event, msg, sender)
+eventFrame:SetScript("OnEvent", function(_, _, msg, sender)
   ClassLogTracker:OnEvent(msg, sender)
 end)
 
