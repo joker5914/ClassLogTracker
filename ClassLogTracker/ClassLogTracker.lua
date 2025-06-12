@@ -16,7 +16,7 @@ CLT.filterType = "party"
 CLT.debug      = false
 CLT.logLines   = {}
 
--- small helpers
+-- tiny helpers
 local function mod(a,b) return a - math.floor(a/b)*b end
 local function normalized(name)
   return name and name:lower():gsub("[^a-z]","") or ""
@@ -28,24 +28,24 @@ local classList = {
   "Mage","Shaman","Druid","Hunter"
 }
 local classColors = {
-  Warrior={1,0.78,0.55},   Paladin={0.96,0.55,0.73}, Priest={1,1,1},
-  Rogue={1,0.96,0.41},     Warlock={0.58,0.51,0.79}, Mage={0.41,0.8,0.94},
-  Shaman={0,0.44,0.87},    Druid={1,0.49,0.04},      Hunter={0.67,0.83,0.45},
+  Warrior={1,0.78,0.55}, Paladin={0.96,0.55,0.73}, Priest={1,1,1},
+  Rogue={1,0.96,0.41},   Warlock={0.58,0.51,0.79}, Mage={0.41,0.8,0.94},
+  Shaman={0,0.44,0.87},  Druid={1,0.49,0.04},     Hunter={0.67,0.83,0.45},
 }
 
 -- map unit name → class token
 local function GetClassByName(name)
   local n = normalized(name)
-  if normalized(UnitName("player") or "") == n then
+  if normalized(UnitName("player") or "")==n then
     return UnitClass("player")
   end
   for i=1,4 do
-    if normalized(UnitName("party"..i)) == n then
+    if normalized(UnitName("party"..i))==n then
       return UnitClass("party"..i)
     end
   end
   for i=1,40 do
-    if normalized(UnitName("raid"..i)) == n then
+    if normalized(UnitName("raid"..i))==n then
       return UnitClass("raid"..i)
     end
   end
@@ -71,9 +71,9 @@ local function AddLogLine(msg, sender)
 end
 
 -- hook raw combat log
-local f = CreateFrame("Frame")
-f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-f:SetScript("OnEvent", function(_, event)
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+frame:SetScript("OnEvent", function(_, event)
   if event ~= "COMBAT_LOG_EVENT_UNFILTERED" then return end
 
   local _, subEvent, _, srcGUID, srcName, _, _, dstGUID, dstName, _, _, spellId, spellName =
@@ -81,8 +81,8 @@ f:SetScript("OnEvent", function(_, event)
   if not srcName then return end
 
   -- enforce party/raid filter
-  local inUnit = (CLT.filterType=="party" and UnitInParty(srcName)) or
-                 (CLT.filterType=="raid"  and UnitInRaid(srcName))
+  local inUnit = (CLT.filterType=="party" and UnitInParty(srcName))
+              or (CLT.filterType=="raid"  and UnitInRaid(srcName))
   if not inUnit then return end
 
   -- only track these
@@ -99,7 +99,7 @@ f:SetScript("OnEvent", function(_, event)
     elseif subEvent == "SPELL_AURA_APPLIED" then
       msg = (srcName==UnitName("player") and "You gain "..spellName)
           or (spellName.." applied to "..(dstName or "unknown"))
-    else -- REMOVED
+    else  -- SPELL_AURA_REMOVED
       msg = spellName.." fades from "..(dstName or "unknown")
     end
 
