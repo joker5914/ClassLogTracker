@@ -3,7 +3,6 @@
 -- grab AceGUI (LibStub must already be loaded via your TOC)
 local AceGUI = LibStub:GetLibrary("AceGUI-3.0")
 
--- main table
 ClassLogTracker = {}
 local CLT = ClassLogTracker
 
