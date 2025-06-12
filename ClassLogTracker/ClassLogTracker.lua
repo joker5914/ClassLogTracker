@@ -13,7 +13,7 @@ end
 
 local function normalized(name)
   if not name then return "" end
-  return string.lower(string.gsub(name, "%s+", ""))
+  return string.lower(string.gsub(name, "[^%a]", ""))
 end
 
 local classList = {
@@ -35,7 +35,6 @@ local classColors = {
 
 local function GetClassByName(name)
   name = normalized(name)
-  DEFAULT_CHAT_FRAME:AddMessage("GetClassByName input: " .. (name or "nil"))
   if normalized(UnitName("player") or "") == name then
     return UnitClass("player")
   end
@@ -54,13 +53,12 @@ end
 
 local function AddLogLine(msg, sender)
   local class = GetClassByName(sender)
-  DEFAULT_CHAT_FRAME:AddMessage("Logging class: " .. (class or "nil"))
   if class then
     if not ClassLogTracker.logLines[class] then
       ClassLogTracker.logLines[class] = {}
     end
     table.insert(ClassLogTracker.logLines[class], msg)
-    if table.getn(ClassLogTracker.logLines[class]) > 200 then
+    if #ClassLogTracker.logLines[class] > 200 then
       table.remove(ClassLogTracker.logLines[class], 1)
     end
     if class == ClassLogTracker.selectedClass then
@@ -163,14 +161,13 @@ function ClassLogTracker:OnEvent()
   local msg = arg1
   local sender = arg2
 
-  DEFAULT_CHAT_FRAME:AddMessage("MSG: " .. msg)
-  DEFAULT_CHAT_FRAME:AddMessage("SENDER: " .. (sender or "nil"))
-
   if (not sender or sender == "") and string.find(msg, "^You ") then
     sender = UnitName("player")
   elseif not sender or sender == "" then
     return
   end
+
+  sender = string.match(sender, "([^%-]+)")
 
   if sender and msg then
     AddLogLine(msg, sender)
