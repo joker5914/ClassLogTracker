@@ -51,7 +51,6 @@ end
 
 local function AddLogLine(msg, sender)
   local class = GetClassByName(sender)
-  DEFAULT_CHAT_FRAME:AddMessage("LOG: " .. msg .. " [" .. (class or "unknown") .. "]")
   if class then
     if not ClassLogTracker.logLines[class] then
       ClassLogTracker.logLines[class] = {}
@@ -118,13 +117,19 @@ function ClassLogTracker:CreateUI()
   filter:SetScript("OnClick", function() ClassLogTracker:ToggleFilterType() end)
   self.filterButton = filter
 
-  local xStart = 10
+  local buttonsPerRow = 6
+  local buttonSpacingX = 85
+  local buttonSpacingY = 26
+  local startX = 10
+  local startY = -40
   for i, class in ipairs(classList) do
     local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     btn:SetWidth(80)
     btn:SetHeight(22)
     btn:SetText(class)
-    btn:SetPoint("TOPLEFT", f, "TOPLEFT", xStart + (i - 1) * 85, -40)
+    local row = math.floor((i - 1) / buttonsPerRow)
+    local col = (i - 1) % buttonsPerRow
+    btn:SetPoint("TOPLEFT", f, "TOPLEFT", startX + col * buttonSpacingX, startY - row * buttonSpacingY)
     local r, g, b = unpack(classColors[class])
     btn:GetFontString():SetTextColor(r, g, b)
     btn:SetScript("OnClick", function()
@@ -134,7 +139,7 @@ function ClassLogTracker:CreateUI()
   end
 
   local scroll = CreateFrame("ScrollFrame", "ClassLogScroll", f, "UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -80)
+  scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -120)
   scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -30, 10)
 
   local text = CreateFrame("EditBox", nil, scroll)
