@@ -5,15 +5,15 @@
 ## Version: 1.0.1
 ## SavedVariables: 
 
-## embed LibStub
+## first load LibStub so LibStub global exists
 Libs/LibStub/LibStub.lua
 
-## embed AceGUI
+## then AceGUI
 Libs/AceGUI-3.0/AceGUI-3.0.xml
 Libs/AceGUI-3.0/AceGUI-3.0.lua
 Libs/AceGUI-3.0/AceGUIWidget-Button.lua
 Libs/AceGUI-3.0/AceGUIWidget-ScrollFrame.lua
 Libs/AceGUI-3.0/AceGUIWidget-MultiLineEditBox.lua
 
-## then your addon
+## finally your code
 ClassLogTracker.lua
