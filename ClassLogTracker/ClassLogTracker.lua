@@ -159,8 +159,14 @@ end
 
 function ClassLogTracker:OnEvent()
   local msg, sender = arg1, arg2
-  if sender and msg then
-    AddLogLine(msg, sender)
+  if msg then
+    local sourceName = sender
+    if (not sender or sender == "") and string.find(msg, "^You ") then
+      sourceName = UnitName("player")
+    end
+    if sourceName then
+      AddLogLine(msg, sourceName)
+    end
   end
 end
 
