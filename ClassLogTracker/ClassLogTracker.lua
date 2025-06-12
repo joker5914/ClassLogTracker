@@ -1,20 +1,15 @@
--- ClassLogTracker.lua
+-- ClassLogTracker Addon
+-- Requires LibStub and AceGUI-3.0 embedded via your TOC under Libs/
 
--- embed AceGUI-3.0 via LibStub (must be in your TOC under Libs)
-local LibStub = _G.LibStub
 local AceGUI = LibStub("AceGUI-3.0")
 
--- main table
 ClassLogTracker = {}
-local CLT = ClassLogTracker
-
--- state
-CLT.frame          = nil
-CLT.textFrame      = nil
-CLT.selectedClass  = nil
-CLT.logLines       = {}
-CLT.filterType     = "party"
-CLT.debug          = false
+ClassLogTracker.frame         = nil
+ClassLogTracker.textFrame     = nil
+ClassLogTracker.selectedClass = nil
+ClassLogTracker.logLines      = {}
+ClassLogTracker.filterType    = "party"
+ClassLogTracker.debug         = false
 
 -- simple modulo
 local function mod(a, b)
@@ -27,29 +22,35 @@ local function normalized(name)
   return string.lower(string.gsub(name, "[^%a]", ""))
 end
 
--- class list & colors
 local classList = {
   "Warrior","Paladin","Priest","Rogue","Warlock",
   "Mage","Shaman","Druid","Hunter"
 }
+
 local classColors = {
-  Warrior={1,0.78,0.55}, Paladin={0.96,0.55,0.73}, Priest={1,1,1},
-  Rogue={1,0.96,0.41},   Warlock={0.58,0.51,0.79}, Mage={0.41,0.8,0.94},
-  Shaman={0,0.44,0.87},  Druid={1,0.49,0.04},     Hunter={0.67,0.83,0.45},
+  Warrior = {1.0,0.78,0.55},
+  Paladin = {0.96,0.55,0.73},
+  Priest  = {1.0,1.0,1.0},
+  Rogue   = {1.0,0.96,0.41},
+  Warlock = {0.58,0.51,0.79},
+  Mage    = {0.41,0.8,0.94},
+  Shaman  = {0.0,0.44,0.87},
+  Druid   = {1.0,0.49,0.04},
+  Hunter  = {0.67,0.83,0.45},
 }
 
--- map unit name → class token
+-- map unit-name → class token
 local function GetClassByName(name)
   local n = normalized(name)
   if normalized(UnitName("player") or "") == n then
     return UnitClass("player")
   end
-  for i = 1, 4 do
+  for i=1,4 do
     if normalized(UnitName("party"..i)) == n then
       return UnitClass("party"..i)
     end
   end
-  for i = 1, 40 do
+  for i=1,40 do
     if normalized(UnitName("raid"..i)) == n then
       return UnitClass("raid"..i)
     end
@@ -62,25 +63,25 @@ local function AddLogLine(msg, sender)
   local cls = GetClassByName(sender)
   if not cls then return end
 
-  CLT.logLines[cls] = CLT.logLines[cls] or {}
-  table.insert(CLT.logLines[cls], msg)
-  if table.getn(CLT.logLines[cls]) > 200 then
-    table.remove(CLT.logLines[cls], 1)
+  ClassLogTracker.logLines[cls] = ClassLogTracker.logLines[cls] or {}
+  table.insert(ClassLogTracker.logLines[cls], msg)
+  if table.getn(ClassLogTracker.logLines[cls]) > 200 then
+    table.remove(ClassLogTracker.logLines[cls], 1)
   end
 
-  if CLT.debug then
+  if ClassLogTracker.debug then
     DEFAULT_CHAT_FRAME:AddMessage(
       "|cff88ff00[CLT Debug]|r ["..cls.."] "..msg
     )
   end
 
-  if cls == CLT.selectedClass then
-    CLT:UpdateLogText()
+  if cls == ClassLogTracker.selectedClass then
+    ClassLogTracker:UpdateLogText()
   end
 end
 
--- redraw the MultiLineEditBox
-function CLT:UpdateLogText()
+-- redraw the MultiLineEditBox with the selected class’s log
+function ClassLogTracker:UpdateLogText()
   if not self.textFrame then return end
   local cls = self.selectedClass
   local buf = cls and self.logLines[cls]
@@ -92,29 +93,32 @@ function CLT:UpdateLogText()
 end
 
 -- toggle party/raid filter
-function CLT:ToggleFilterType()
+function ClassLogTracker:ToggleFilterType(button)
   self.filterType = (self.filterType == "party") and "raid" or "party"
+  if button then
+    button:SetText("Filter: "..self.filterType)
+  end
 end
 
 -- build (or show) the AceGUI UI
-function CLT:CreateUI()
-  if CLT.frame then
-    CLT.frame:Show()
+function ClassLogTracker:CreateUI()
+  if self.frame then
+    self.frame:Show()
     return
   end
 
   -- reset logs
-  CLT.logLines = {}
+  self.logLines = {}
 
   -- main window
   local f = AceGUI:Create("Frame")
-  f:SetTitle("Class Log Tracker")
+  f:SetTitle("ClassLogTracker")
   f:SetStatusText("Filter: "..self.filterType)
   f:SetLayout("Flow")
   f:SetCallback("OnClose", function(widget) widget:Hide() end)
   f:SetWidth(600)
   f:SetHeight(500)
-  CLT.frame = f
+  self.frame = f
 
   -- ChatLog toggle
   local chatBtn = AceGUI:Create("Button")
@@ -130,17 +134,17 @@ function CLT:CreateUI()
   filterBtn:SetText("Filter: "..self.filterType)
   filterBtn:SetWidth(120)
   filterBtn:SetCallback("OnClick", function()
-    CLT:ToggleFilterType()
-    filterBtn:SetText("Filter: "..CLT.filterType)
-    f:SetStatusText("Filter: "..CLT.filterType)
+    ClassLogTracker:ToggleFilterType(filterBtn)
+    f:SetStatusText("Filter: "..ClassLogTracker.filterType)
   end)
   f:AddChild(filterBtn)
+  self.filterButton = filterBtn
 
   -- spacer
-  local sep = AceGUI:Create("Label")
-  sep:SetText(" ")
-  sep:SetFullWidth(true)
-  f:AddChild(sep)
+  local sep1 = AceGUI:Create("Label")
+  sep1:SetText(" ")
+  sep1:SetFullWidth(true)
+  f:AddChild(sep1)
 
   -- class buttons container
   local classFlow = AceGUI:Create("SimpleGroup")
@@ -153,8 +157,8 @@ function CLT:CreateUI()
     local r,g,b = unpack(classColors[cls])
     btn:SetColor(r,g,b)
     btn:SetCallback("OnClick", function()
-      CLT.selectedClass = cls
-      CLT:UpdateLogText()
+      ClassLogTracker.selectedClass = cls
+      ClassLogTracker:UpdateLogText()
     end)
     classFlow:AddChild(btn)
   end
@@ -179,19 +183,7 @@ function CLT:CreateUI()
   edit:SetText("No data yet...")
   scroll:AddChild(edit)
   f:AddChild(scroll)
-  CLT.textFrame = edit
-end
-
--- explicit OnEvent (unused if using COMBAT_LOG hook)
-function CLT:OnEvent(msg, sender)
-  if type(msg) ~= "string" or msg == "" then return end
-  if (not sender or sender == "") and msg:find("^You ") then
-    sender = UnitName("player")
-  elseif not sender or sender == "" then
-    return
-  end
-  sender = sender:match("^[^-]+")
-  AddLogLine(msg, sender)
+  self.textFrame = edit
 end
 
 -- raw combat-log hook
@@ -200,26 +192,22 @@ eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 eventFrame:SetScript("OnEvent", function(_, event)
   if event ~= "COMBAT_LOG_EVENT_UNFILTERED" then return end
 
-  local _, subEvent, _, srcGUID, srcName, _, _, dstGUID, dstName =
+  local _,subEvent,_,srcGUID,srcName,_,_,dstGUID,dstName =
     CombatLogGetCurrentEventInfo()
   if not srcName then return end
 
   -- party/raid filter
   local inGroup = false
-  if CLT.filterType == "party" then
+  if ClassLogTracker.filterType == "party" then
     if srcName == UnitName("player") then inGroup = true end
-    for i = 1, 4 do
-      if UnitName("party"..i) == srcName then inGroup = true end
-    end
+    for i=1,4 do if UnitName("party"..i)==srcName then inGroup = true end end
   else
     if srcName == UnitName("player") then inGroup = true end
-    for i = 1, 40 do
-      if UnitName("raid"..i) == srcName then inGroup = true end
-    end
+    for i=1,40 do if UnitName("raid"..i)==srcName then inGroup = true end end
   end
   if not inGroup then return end
 
-  -- track only these sub-events
+  -- only track these sub-events
   if subEvent ~= "SPELL_CAST_SUCCESS"
      and not subEvent:find("HEAL")
      and subEvent ~= "SPELL_AURA_APPLIED"
@@ -227,22 +215,22 @@ eventFrame:SetScript("OnEvent", function(_, event)
     return
   end
 
-  -- build the message
-  local _,_,_,_,_,_,_,_,_,_,_, spellId, spellName =
+  -- build message
+  local _,_,_,_,_,_,_,_,_,_,_,spellId,spellName =
     CombatLogGetCurrentEventInfo()
   local msg
-  if subEvent == "SPELL_CAST_SUCCESS" then
+  if subEvent=="SPELL_CAST_SUCCESS" then
     msg = spellName.." → "..(dstName or "unknown")
   elseif subEvent:find("HEAL") then
     msg = spellName.." healed "..(dstName or "unknown")
-  elseif subEvent == "SPELL_AURA_APPLIED" then
-    if srcName == UnitName("player") then
+  elseif subEvent=="SPELL_AURA_APPLIED" then
+    if srcName==UnitName("player") then
       msg = "You gain "..spellName
     else
       msg = spellName.." applied to "..(dstName or "unknown")
     end
   else -- SPELL_AURA_REMOVED
-    if dstName == UnitName("player") then
+    if dstName==UnitName("player") then
       msg = spellName.." fades from you"
     else
       msg = spellName.." fades from "..(dstName or "unknown")
@@ -255,7 +243,7 @@ end)
 -- slash to open UI
 SLASH_CLASSLOG1 = "/classlog"
 SlashCmdList["CLASSLOG"] = function()
-  CLT:CreateUI()
+  ClassLogTracker:CreateUI()
 end
 
 -- initial load message
