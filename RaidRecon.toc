@@ -1,5 +1,5 @@
 ## Interface: 11200
-## Title: |cff00ced1RaidRecon|r
+## Title: |cff00ced1[CS]|r |cffffffffRaidRecon|r
 ## Notes: Tracks and displays combat log events by class in party/raid.
 ## Author: Coldsnappy
 ## Version: GIT
