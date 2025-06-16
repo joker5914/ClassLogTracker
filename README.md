@@ -1,6 +1,6 @@
-# RaidRecon 📡
+# RaidRecon
 
-**RaidRecon** is your spy-themed WoW addon for TurtleWoW (1.12.1) that lets you eavesdrop on combat logs by class—so you can sniff out mistakes, interrupts, overheals and more in your party or raid.
+**RaidRecon** is your spy-themed WoW addon for TurtleWoW (1.12.1) that lets you eavesdrop on combat logs by class—so you can sniff out mistakes in your party or raid.
 
 ---
 
@@ -8,7 +8,7 @@
 
 - 🔍 **Class-filtered logs**: one-click buttons to view only Warrior, Priest, Mage, etc.  
 - 🎨 **Color-coded** class buttons for instant recognition  
-- 🔀 **Party/Raid switch**: toggle between small-group and raid data  
+- 🔀 **Party/Raid switch**: toggle between small-group and full-raid data  
 - 📜 **Live scrolling output**: real-time feed of the selected class’s spells, heals, auras and fades  
 - 📦 **Minimal dependencies**: uses Blizzard frames + LibAddonMenu-2.0 only  
 - 📌 **Draggable & closable** UI panel  
@@ -25,59 +25,65 @@
 4. Paste this repo URL:  
    ```text
    https://github.com/joker5914/RaidRecon
-Start the game and enable RaidRecon in your AddOns menu
+   ```  
+5. Launch the game and enable **RaidRecon** in your AddOns menu  
 
-🎮 Usage
-Open the Spy Panel
-lua
-Copy
-Edit
+---
+
+## 🎮 Usage
+
+### Open the Spy Panel
+```lua
 /raidrecon
-Panel Breakdown
-Top row
+```
 
-📡 ChatLog: toggles Blizzard’s /chatlog on/off
+### Panel Breakdown
 
-🔀 Filter: switches between your party or full raid
+- **Top row**  
+  - 📡 **ChatLog**: toggles Blizzard’s `/chatlog` on/off  
+  - 🔀 **Filter**: switches between your party or full raid  
 
-Class buttons
+- **Class buttons**  
+  - 🔵 **Warrior**, 🟣 **Warlock**, etc.—click one to filter to that class  
 
-🔵 Warrior, 🟣 Warlock, etc.—click one to filter to that class
+- **Log window**  
+  - 📜 Live feed of the selected class’s combat-log events  
 
-Log window
+### Quickstart
 
-📜 Live feed of the selected class’s combat-log events
+1. Type `/raidrecon`  
+2. Click **“Priest”** to spy on your healers  
+3. Toggle **Filter: party/raid** to expand scope  
+4. Scroll to spot interrupts, overheals, buff fades, and more  
 
-Quickstart
-Type /raidrecon
+---
 
-Click “Priest” to spy on your healers
+## 🛠️ Configuration Panel
 
-Toggle Filter: party/raid to expand scope
+Open **Interface → AddOns → RaidRecon** to configure:
 
-Scroll to spot interrupts, overheals, buff fades, and more
+| Control       | Description                                           |
+|---------------|-------------------------------------------------------|
+| **ChatLog**   | Toggle Blizzard’s `/chatlog` on or off                |
+| **Filter**    | Choose **Party** or **Raid** as your data source      |
+| **Debug**     | Enable or disable debug messages in your chat window  |
+| **Clear Logs**| Erase all stored log entries                          |
 
-🛠️ Configuration Panel
-Open the Interface → AddOns → RaidRecon panel to:
+---
 
-▶️ Toggle ChatLog
+## 🧪 Roadmap
 
-🔽 Choose Party or Raid as your data source
+- [ ] Sound or visual alerts on key events (interrupts, dispels, deaths)  
+- [ ] Add timestamps and severity highlights  
+- [ ] Export logs to file for post-mortem analysis  
+- [ ] Right-click class buttons for sub-filters (heals-only, casts-only)  
 
-🐞 Enable Debug messages
+---
 
-🧹 Clear Logs buffer
+## 📝 License
 
-🧪 Roadmap
- Sound or visual alerts on key events (interrupts, dispels, deaths)
-
- Add timestamps and severity highlights
-
- Export logs to file for post-mortem analysis
-
- Right-click class buttons for sub-filters (heals-only, casts-only)
-
-📝 License
 MIT — steal, tweak, laugh, repeat.
 
-© Coldsnappy — “Making raid review suck less, one spy tool at a time.”
+---
+
+© Coldsnappy — “Making raid review suck less, one spy tool at a time.”  
