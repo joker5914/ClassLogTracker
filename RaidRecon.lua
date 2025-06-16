@@ -1,12 +1,10 @@
 -- RaidRecon.lua
-
-local LibStub        = LibStub
-local AceAddon       = LibStub:GetLibrary("AceAddon-3.0")
-local AceConsole     = LibStub:GetLibrary("AceConsole-3.0")
-local AceEvent       = LibStub:GetLibrary("AceEvent-3.0")
-local AceGUI         = LibStub:GetLibrary("AceGUI-3.0")
-local AceConfig      = LibStub:GetLibrary("AceConfig-3.0")
-local AceConfigDialog= LibStub:GetLibrary("AceConfigDialog-3.0")
+local AceAddon        = LibStub:GetLibrary("AceAddon-3.0")
+local AceConsole      = LibStub:GetLibrary("AceConsole-3.0")
+local AceEvent        = LibStub:GetLibrary("AceEvent-3.0")
+local AceGUI          = LibStub:GetLibrary("AceGUI-3.0")
+local AceConfig       = LibStub:GetLibrary("AceConfig-3.0")
+local AceConfigDialog = LibStub:GetLibrary("AceConfigDialog-3.0")
 
 -- create addon
 local RaidRecon = AceAddon:NewAddon("RaidRecon","AceConsole-3.0","AceEvent-3.0")
