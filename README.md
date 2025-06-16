@@ -4,18 +4,18 @@
 
 ---
 
-## 🕵️‍♂️ Features
+## Features
 
-- 🔍 **Class-filtered logs**: one-click buttons to view only Warrior, Priest, Mage, etc.  
-- 🎨 **Color-coded** class buttons for instant recognition  
-- 🔀 **Party/Raid switch**: toggle between small-group and full-raid data  
-- 📜 **Live scrolling output**: real-time feed of the selected class’s spells, heals, auras and fades  
-- 📦 **Minimal dependencies**: uses Blizzard frames + LibAddonMenu-2.0 only  
-- 📌 **Draggable & closable** UI panel  
+-  **Class-filtered logs**: one-click buttons to view only Warrior, Priest, Mage, etc.  
+-  **Color-coded** class buttons for instant recognition  
+-  **Party/Raid switch**: toggle between small-group and full-raid data  
+-  **Live scrolling output**: real-time feed of the selected class’s spells, heals, auras and fades  
+-  **Minimal dependencies**: uses Blizzard frames + LibAddonMenu-2.0 only  
+-  **Draggable & closable** UI panel  
 
 ---
 
-## 🚀 Installation
+##  Installation
 
 ### TurtleWoW GitHub Installer
 
@@ -30,7 +30,7 @@
 
 ---
 
-## 🎮 Usage
+##  Usage
 
 ### Open the Spy Panel
 ```lua
@@ -40,14 +40,14 @@
 ### Panel Breakdown
 
 - **Top row**  
-  - 📡 **ChatLog**: toggles Blizzard’s `/chatlog` on/off  
-  - 🔀 **Filter**: switches between your party or full raid  
+  -  **ChatLog**: toggles Blizzard’s `/chatlog` on/off  
+  -  **Filter**: switches between your party or full raid  
 
 - **Class buttons**  
   - 🔵 **Warrior**, 🟣 **Warlock**, etc.—click one to filter to that class  
 
 - **Log window**  
-  - 📜 Live feed of the selected class’s combat-log events  
+  - Live feed of the selected class’s combat-log events  
 
 ### Quickstart
 
@@ -83,7 +83,3 @@ Open **Interface → AddOns → RaidRecon** to configure:
 ## 📝 License
 
 MIT — steal, tweak, laugh, repeat.
-
----
-
-© Coldsnappy — “Making raid review suck less, one spy tool at a time.”  
