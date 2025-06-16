@@ -1,33 +1,30 @@
-RaidRecon 📡
-RaidRecon is your spy-themed WoW addon for TurtleWoW (1.12.1) that lets you eavesdrop on combat logs by class—so you can sniff out mistakes, interrupts, overheals and more in your party or raid.
+# RaidRecon 📡
 
-🕵️‍♂️ Features
-🔍 Class-filtered logs: one-click buttons to view only Warrior, Priest, Mage, etc.
+**RaidRecon** is your spy-themed WoW addon for TurtleWoW (1.12.1) that lets you eavesdrop on combat logs by class—so you can sniff out mistakes, interrupts, overheals and more in your party or raid.
 
-🎨 Color-coded class buttons for instant recognition
+---
 
-🔀 Party/Raid switch: toggle between small-group and raid data
+## 🕵️‍♂️ Features
 
-📜 Live scrolling output: real-time feed of the selected class’s spells, heals, auras and fades
+- 🔍 **Class-filtered logs**: one-click buttons to view only Warrior, Priest, Mage, etc.  
+- 🎨 **Color-coded** class buttons for instant recognition  
+- 🔀 **Party/Raid switch**: toggle between small-group and raid data  
+- 📜 **Live scrolling output**: real-time feed of the selected class’s spells, heals, auras and fades  
+- 📦 **Minimal dependencies**: uses Blizzard frames + LibAddonMenu-2.0 only  
+- 📌 **Draggable & closable** UI panel  
 
-📦 Minimal dependencies: uses Blizzard frames + LibAddonMenu-2.0 only
+---
 
-📌 Draggable & closable UI panel
+## 🚀 Installation
 
-🚀 Installation
-TurtleWoW GitHub Installer
-Open the TurtleWoW Launcher
+### TurtleWoW GitHub Installer
 
-Go to the AddOns tab
-
-Click “Install from GitHub”
-
-Paste this repo URL:
-
-arduino
-Copy
-Edit
-https://github.com/joker5914/RaidRecon
+1. Open the **TurtleWoW Launcher**  
+2. Go to the **AddOns** tab  
+3. Click **“Install from GitHub”**  
+4. Paste this repo URL:  
+   ```text
+   https://github.com/joker5914/RaidRecon
 Start the game and enable RaidRecon in your AddOns menu
 
 🎮 Usage
