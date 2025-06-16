@@ -1,10 +1,8 @@
 ## Interface: 11200
-## Title: |cffe5b3e5ClassLogTracker|r
+## Title: RaidRecon
 ## Notes: Tracks and displays combat log events by class in party/raid.
 ## Author: Coldsnappy
-## Version: 1.0.1
-## SavedVariables: 
+## Version: GIT
+## Dependencies: LibStub, LibAddonMenu-2.0
 
-## Dependencies: AceGUI-3.0
-
-ClassLogTracker.lua
+RaidRecon.lua
