@@ -1,6 +1,6 @@
 -- RaidRecon.lua
 
-local LibStub        = _G.LibStub
+local LibStub        = LibStub
 local AceAddon       = LibStub:GetLibrary("AceAddon-3.0")
 local AceConsole     = LibStub:GetLibrary("AceConsole-3.0")
 local AceEvent       = LibStub:GetLibrary("AceEvent-3.0")
