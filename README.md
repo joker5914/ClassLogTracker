@@ -1,82 +1,86 @@
-# ClassLogTracker 📊
+RaidRecon 📡
+RaidRecon is your spy-themed WoW addon for TurtleWoW (1.12.1) that lets you eavesdrop on combat logs by class—so you can sniff out mistakes, interrupts, overheals and more in your party or raid.
 
-**ClassLogTracker** is a powerful TurtleWoW addon that provides a clean, UI-based way to inspect and filter combat log activity by class during party and raid encounters.
+🕵️‍♂️ Features
+🔍 Class-filtered logs: one-click buttons to view only Warrior, Priest, Mage, etc.
 
----
+🎨 Color-coded class buttons for instant recognition
 
-## 🧩 Features
+🔀 Party/Raid switch: toggle between small-group and raid data
 
-- 🎯 **Filter combat logs by class** with a single click
-- 🎨 **Class-colored buttons** for Warrior, Mage, Paladin, etc.
-- 🔁 Toggle between **Party** or **Raid** log sources
-- 🧾 Scrollable, real-time log output for deeper visibility
-- 🖱️ Movable and closable UI window
-- 🧵 Designed for TurtleWoW (1.12.1) client
+📜 Live scrolling output: real-time feed of the selected class’s spells, heals, auras and fades
 
----
+📦 Minimal dependencies: uses Blizzard frames + LibAddonMenu-2.0 only
 
-## 🚀 Installation
+📌 Draggable & closable UI panel
 
-### Option 1: TurtleWoW GitHub Installer
+🚀 Installation
+TurtleWoW GitHub Installer
+Open the TurtleWoW Launcher
 
-1. Open the **TurtleWoW Launcher**
-2. Go to the **AddOns** tab
-3. Click **“Install from GitHub”**
-4. Paste this repo URL:
+Go to the AddOns tab
 
-   ```
-   https://github.com/joker5914/ClassLogTracker
-   ```
+Click “Install from GitHub”
 
-5. Launch the game and enable `ClassLogTracker` in your AddOns menu
+Paste this repo URL:
 
----
+arduino
+Copy
+Edit
+https://github.com/joker5914/RaidRecon
+Start the game and enable RaidRecon in your AddOns menu
 
-## 🕹️ Usage
+🎮 Usage
+Open the Spy Panel
+lua
+Copy
+Edit
+/raidrecon
+Panel Breakdown
+Top row
 
-### Open the Interface:
-```lua
-/classlog
-```
+📡 ChatLog: toggles Blizzard’s /chatlog on/off
 
-### Interface Overview:
-- 📍Top-left: **Filter toggle** (switches between party and raid logs)
-- 🎨 Grid of buttons: **One per class** (colored by class)
-- 📜 Main log view: Shows log lines related to the selected class
+🔀 Filter: switches between your party or full raid
 
-### Example Workflow:
-1. Type `/classlog` to open the window
-2. Click "Paladin" to filter logs by paladins in your group
-3. Use the "Filter: party/raid" toggle to switch between party or raid events
-4. Scroll through logs to analyze their actions during combat
+Class buttons
 
----
+🔵 Warrior, 🟣 Warlock, etc.—click one to filter to that class
 
-## 🧱 Planned Features
+Log window
 
-- [ ] Sound/visual alerts on key events (e.g., interrupts, deaths)
-- [ ] Timestamp display
-- [ ] Save logs to disk
-- [ ] Right-click class button for further filtering (e.g., healing-only)
+📜 Live feed of the selected class’s combat-log events
 
----
+Quickstart
+Type /raidrecon
 
-## 🎨 Addon Display Name
+Click “Priest” to spy on your healers
 
-In your AddOns menu, the name will appear as:
+Toggle Filter: party/raid to expand scope
 
-```lua
-|cffe5b3e5ClassLogTracker|r
-```
+Scroll to spot interrupts, overheals, buff fades, and more
 
-(Subtle pink for classy vibes)
+🛠️ Configuration Panel
+Open the Interface → AddOns → RaidRecon panel to:
 
----
+▶️ Toggle ChatLog
 
-## ⚖️ License
+🔽 Choose Party or Raid as your data source
 
-MIT — use, tweak, ship, or meme freely.
+🐞 Enable Debug messages
 
----
+🧹 Clear Logs buffer
 
-💬 Built to make raid review suck less.
+🧪 Roadmap
+ Sound or visual alerts on key events (interrupts, dispels, deaths)
+
+ Add timestamps and severity highlights
+
+ Export logs to file for post-mortem analysis
+
+ Right-click class buttons for sub-filters (heals-only, casts-only)
+
+📝 License
+MIT — steal, tweak, laugh, repeat.
+
+© Coldsnappy — “Making raid review suck less, one spy tool at a time.”
