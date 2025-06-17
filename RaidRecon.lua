@@ -7,7 +7,7 @@ local RR = RaidRecon
 RR.filterType    = "party"
 RR.selectedClass = nil
 RR.logLines      = {}
-RR.debug         = false  -- set true to debug in chat
+RR.debug         = false  -- set true to see debug messages in chat
 
 -- helpers
 local function mod(a,b)       return a - math.floor(a/b)*b end
@@ -48,9 +48,7 @@ local function AddLogLine(msg, sender)
   RR.logLines[cls] = buf
 
   if RR.debug then
-    DEFAULT_CHAT_FRAME:AddMessage(
-      "|cff00ced1[RaidRecon]|r ["..cls.."] "..msg
-    )
+    DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1[RaidRecon]|r ["..cls.."] "..msg)
   end
 
   if cls == RR.selectedClass then
@@ -174,14 +172,14 @@ for _,ev in ipairs({
   eventFrame:RegisterEvent(ev)
 end
 
-eventFrame:SetScript("OnEvent", function(self, event, ...)
-  local msg, sender = ...
+-- explicit args, no varargs
+eventFrame:SetScript("OnEvent", function(self, event, msg, sender)
   if type(msg) ~= "string" or msg == "" then return end
 
-  -- strip realm from sender
+  -- strip realm from sender name
   if sender then sender = sender:match("^[^-]+") end
 
-  -- “You …” maps to player
+  -- map "You ..." text to yourself
   if (not sender or sender=="") and msg:find("^You ") then
     sender = UnitName("player")
   elseif not sender or sender=="" then
@@ -191,9 +189,9 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
   AddLogLine(msg, sender)
 end)
 
--- slash command
+-- slash to open
 SLASH_RAIDRECON1 = "/raidrecon"
 SlashCmdList["RAIDRECON"] = function() RR:CreateUI() end
 
--- load message
+-- load notice
 DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1RaidRecon loaded. Type /raidrecon to open.|r")
