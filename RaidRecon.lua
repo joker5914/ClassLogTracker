@@ -59,16 +59,22 @@ end
 -- redraw the EditBox
 function RR:UpdateLogText()
   if not self.text then return end
+
   local cls = self.selectedClass
-  local buf = cls and self.logLines[cls]
+  if not cls then
+    self.text:SetText("No class selected")
+    return
+  end
+
+  local buf = self.logLines[cls]
   if not buf or table.getn(buf) == 0 then
-    -- turn "Warrior" into "Warriors", etc.
-    local display = cls .. "s"
-    self.text:SetText("No data for " .. display)
+    -- pluralize by just tacking on “s”
+    self.text:SetText("No data for " .. cls .. "s")
   else
     self.text:SetText(table.concat(buf, "\n"))
   end
 end
+
 
 -- toggle party/raid filter
 function RR:ToggleFilterType(btn)
