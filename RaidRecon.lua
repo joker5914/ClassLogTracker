@@ -105,12 +105,12 @@ function RR:CreateUI()
   f.title:SetPoint("TOP",f,"TOP",0,-12)
   f.title:SetText("Filter: "..RR.filterType)
 
-  -- ChatLog toggle
+  -- CombatLog toggle
   local cb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   cb:SetWidth(100); cb:SetHeight(24)
   cb:SetPoint("TOPLEFT",f,16,-40)
-  cb:SetText("ChatLog")
-  cb:SetScript("OnClick", function() SlashCmdList["CHATLOG"]("") end)
+  cb:SetText("CombatLog")
+  cb:SetScript("OnClick", function() SlashCmdList["COMBATLOG"]("") end)
 
   -- Filter toggle
   local fb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
