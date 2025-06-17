@@ -1,22 +1,12 @@
 -- RaidRecon.lua
 
-RaidRecon = {}
-local RR = RaidRecon
+local RaidRecon = CreateFrame("Frame")
+RaidRecon:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+RaidRecon:RegisterEvent("PLAYER_LOGIN")
 
--- state
-RR.filterType    = "party"
-RR.selectedClass = nil
-RR.logLines      = {}
-RR.debug         = false  -- set true to see debug messages in chat
-
--- helpers
-local function mod(a,b)       return a - math.floor(a/b)*b end
-local function normalized(s)  return (s or ""):lower():gsub("[^%a]","") end
-
--- class list & colors
 local classList = {
   "Warrior","Paladin","Priest","Rogue","Warlock",
-  "Mage","Shaman","Druid","Hunter",
+  "Mage","Shaman","Druid","Hunter"
 }
 local classColors = {
   Warrior={1,0.78,0.55}, Paladin={0.96,0.55,0.73}, Priest={1,1,1},
@@ -24,40 +14,52 @@ local classColors = {
   Shaman={0,0.44,0.87},  Druid={1,0.49,0.04},     Hunter={0.67,0.83,0.45},
 }
 
--- find a unit’s class by name
+RaidRecon.filterType    = "party"
+RaidRecon.logLines      = {}
+RaidRecon.selectedClass = nil
+
+-- normalize a unit name for matching
+local function normalized(s)
+  return (s or ""):lower():gsub("[^%a]","")
+end
+
+-- find class by unit name
 local function GetClassByName(name)
   local n = normalized(name)
-  if normalized(UnitName("player")) == n then return UnitClass("player") end
+  if normalized(UnitName("player")) == n then
+    return UnitClass("player")
+  end
   for i=1,4 do
-    if normalized(UnitName("party"..i)) == n then return UnitClass("party"..i) end
+    if normalized(UnitName("party"..i)) == n then
+      return UnitClass("party"..i)
+    end
   end
   for i=1,40 do
-    if normalized(UnitName("raid"..i)) == n then return UnitClass("raid"..i) end
+    if normalized(UnitName("raid"..i)) == n then
+      return UnitClass("raid"..i)
+    end
   end
   return nil
 end
 
--- record a combat message under the sender’s class
+-- record a log line under the right class
 local function AddLogLine(msg, sender)
   local cls = GetClassByName(sender)
   if not cls then return end
 
-  local buf = RR.logLines[cls] or {}
-  table.insert(buf, msg)
-  if table.getn(buf) > 200 then table.remove(buf, 1) end
-  RR.logLines[cls] = buf
-
-  if RR.debug then
-    DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1[RaidRecon]|r ["..cls.."] "..msg)
+  RaidRecon.logLines[cls] = RaidRecon.logLines[cls] or {}
+  table.insert(RaidRecon.logLines[cls], msg)
+  if table.getn(RaidRecon.logLines[cls]) > 200 then
+    table.remove(RaidRecon.logLines[cls], 1)
   end
 
-  if cls == RR.selectedClass then
-    RR:UpdateLogText()
+  if cls == RaidRecon.selectedClass then
+    RaidRecon:UpdateLogText()
   end
 end
 
 -- redraw the EditBox
-function RR:UpdateLogText()
+function RaidRecon:UpdateLogText()
   if not self.text then return end
 
   local cls = self.selectedClass
@@ -66,141 +68,137 @@ function RR:UpdateLogText()
     return
   end
 
-  local buf = self.logLines[cls]
-  if not buf or table.getn(buf) == 0 then
-    -- pluralize by just tacking on “s”
+  local buf = self.logLines[cls] or {}
+  if table.getn(buf) == 0 then
+    -- pluralize by adding “s”
     self.text:SetText("No data for " .. cls .. "s")
   else
     self.text:SetText(table.concat(buf, "\n"))
   end
 end
 
-
--- toggle party/raid filter
-function RR:ToggleFilterType(btn)
-  RR.filterType = (RR.filterType=="party") and "raid" or "party"
-  btn:SetText("Filter: "..RR.filterType)
-  RR.frame.title:SetText("Filter: "..RR.filterType)
-end
-
--- build (or show) UI
-function RR:CreateUI()
-  if RR.frame then RR.frame:Show(); return end
-  RR.logLines = {}
-
-  local f = CreateFrame("Frame","RRFrame",UIParent)
-  f:SetWidth(600); f:SetHeight(500)
-  f:SetPoint("CENTER",UIParent,"CENTER",0,0)
-  f:SetBackdrop{
-    bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile     = true, tileSize=16, edgeSize=16,
-    insets   = {4,4,4,4},
-  }
-  f:SetBackdropColor(0,0,0,0.9)
-  f:EnableMouse(true); f:SetMovable(true)
-  f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", function() f:StartMoving() end)
-  f:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
-
-  -- close button
-  local close = CreateFrame("Button",nil,f,"UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT",f,-6,-6)
-  close:SetScript("OnClick", function() f:Hide() end)
-
-  -- title
-  f.title = f:CreateFontString(nil,"OVERLAY","GameFontNormalLarge")
-  f.title:SetPoint("TOP",f,"TOP",0,-12)
-  f.title:SetText("Filter: "..RR.filterType)
-
-  -- CombatLog toggle (writes to Logs/CombatLog.txt)
-  local cb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-  cb:SetWidth(100); cb:SetHeight(24)
-  cb:SetPoint("TOPLEFT",f,16,-40)
-  cb:SetText("CombatLog")
-  cb:SetScript("OnClick",function() SlashCmdList["COMBATLOG"]("") end)
-
-  -- Filter toggle
-  local fb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-  fb:SetWidth(100); fb:SetHeight(24)
-  fb:SetPoint("LEFT",cb,"RIGHT",8,0)
-  fb:SetText("Filter: "..RR.filterType)
-  fb:SetScript("OnClick",function() RR:ToggleFilterType(fb) end)
-  RR.filterButton = fb
-
-  -- class buttons
-  local perRow,sx,sy,ox,oy = 6,90,28,16,-80
-  for i,cls in ipairs(classList) do
-    local btn = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-    btn:SetWidth(80); btn:SetHeight(24)
-    local row,col = math.floor((i-1)/perRow), mod(i-1,perRow)
-    btn:SetPoint("TOPLEFT",f,ox+col*sx,oy-row*sy)
-    btn:SetText(cls)
-    local r,g,b = unpack(classColors[cls])
-    btn:GetFontString():SetTextColor(r,g,b)
-    btn:SetScript("OnClick",function()
-      RR.selectedClass = cls
-      RR:UpdateLogText()
-    end)
-  end
-
-  -- scrollable EditBox
-  local scroll = CreateFrame("ScrollFrame","RRScroll",f,"UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT",f,16,-250)
-  scroll:SetPoint("BOTTOMRIGHT",f,-32,16)
-  local edit = CreateFrame("EditBox",nil,scroll)
-  edit:SetMultiLine(true)
-  edit:SetFontObject(ChatFontNormal)
-  edit:SetWidth(540); edit:SetHeight(230)
-  edit:SetAutoFocus(false)
-  edit:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
-  scroll:SetScrollChild(edit)
-  RR.text  = edit
-  RR.frame = f
-
-  -- default to first class
-  RR.selectedClass = classList[1]
-  RR:UpdateLogText()
-end
-
--- legacy combat-text events (Classic client)
-local eventFrame = CreateFrame("Frame")
-for _,ev in ipairs({
-  "CHAT_MSG_SPELL_SELF_BUFF","CHAT_MSG_SPELL_SELF_DAMAGE",
-  "CHAT_MSG_SPELL_AURA_GONE_SELF","CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE","CHAT_MSG_COMBAT_SELF_HITS",
-  "CHAT_MSG_SPELL_PARTY_BUFF","CHAT_MSG_SPELL_PARTY_DAMAGE",
-  "CHAT_MSG_SPELL_AURA_GONE_PARTY","CHAT_MSG_SPELL_PERIODIC_PARTY_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE","CHAT_MSG_COMBAT_PARTY_HITS",
-  "CHAT_MSG_SPELL_FRIENDLYPLAYER_BUFF","CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE",
-  "CHAT_MSG_SPELL_AURA_GONE_FRIENDLYPLAYER",
-  "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS",
-  "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE",
-  "CHAT_MSG_COMBAT_FRIENDLYPLAYER_HITS",
-}) do
-  eventFrame:RegisterEvent(ev)
-end
-
--- explicit args, no varargs
-eventFrame:SetScript("OnEvent", function(self, event, msg, sender)
-  if type(msg) ~= "string" or msg == "" then return end
-
-  -- strip realm from sender name
-  if sender then sender = sender:match("^[^-]+") end
-
-  -- map "You ..." text to yourself
-  if (not sender or sender=="") and msg:find("^You ") then
-    sender = UnitName("player")
-  elseif not sender or sender=="" then
+-- build (or show) the UI
+function RaidRecon:CreateUI()
+  if self.frame then
+    self.frame:Show()
     return
   end
 
-  AddLogLine(msg, sender)
+  -- main window
+  local f = CreateFrame("Frame", "RaidReconFrame", UIParent, "BasicFrameTemplateWithInset")
+  f:SetSize(600, 400)
+  f:SetPoint("CENTER")
+  f:SetMovable(true)
+  f:EnableMouse(true)
+  f:RegisterForDrag("LeftButton")
+  f:SetScript("OnDragStart", f.StartMoving)
+  f:SetScript("OnDragStop",  f.StopMovingOrSizing)
+  f:SetClampedToScreen(true)
+  self.frame = f
+
+  -- title text
+  f.title = f:CreateFontString(nil, "OVERLAY")
+  f.title:SetFontObject("GameFontHighlight")
+  f.title:SetPoint("LEFT", f.TitleBg, "LEFT", 5, 0)
+  f.title:SetText("Filter: " .. self.filterType)
+
+  -- close button
+  local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+  close:SetPoint("TOPRIGHT", f, "TOPRIGHT")
+  close:SetScript("OnClick", function() f:Hide() end)
+
+  -- scrollable output
+  local scrollFrame = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+  scrollFrame:SetPoint("TOPLEFT",     f, "TOPLEFT",     10, -40)
+  scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -30, 10)
+
+  local editBox = CreateFrame("EditBox", nil, scrollFrame)
+  editBox:SetMultiLine(true)
+  editBox:SetFontObject(ChatFontNormal)
+  editBox:SetWidth(540)
+  editBox:SetAutoFocus(false)
+  editBox:SetScript("OnEscapePressed", editBox.ClearFocus)
+  scrollFrame:SetScrollChild(editBox)
+  self.text = editBox
+
+  -- class buttons
+  local btnFrame = CreateFrame("Frame", nil, f)
+  btnFrame:SetSize(580, 30)
+  btnFrame:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
+
+  local xOffset = 0
+  for _, cls in ipairs(classList) do
+    local b = CreateFrame("Button", nil, btnFrame, "UIPanelButtonTemplate")
+    b:SetSize(60, 20)
+    b:SetPoint("TOPLEFT", xOffset, 0)
+    b:SetText(cls)
+    local r,g,bc = unpack(classColors[cls])
+    b:GetFontString():SetTextColor(r,g,bc)
+    b:SetScript("OnClick", function()
+      self.selectedClass = cls
+      f.title:SetText("Filter: " .. self.filterType .. " | Class: " .. cls)
+      self:UpdateLogText()
+    end)
+    xOffset = xOffset + 65
+  end
+
+  -- default to first class
+  self.selectedClass = classList[1]
+  f.title:SetText("Filter: " .. self.filterType .. " | Class: " .. self.selectedClass)
+  self:UpdateLogText()
+end
+
+-- parse all key combat-log events (damage + buff/aura)
+function RaidRecon:ParseCombatLog()
+  local timestamp, subevent,
+        _, srcGUID, sourceName, srcFlags,
+        _, dstGUID, destName, dstFlags,
+        spellID, spellName = CombatLogGetCurrentEventInfo()
+
+  if not sourceName then return end
+
+  -- only track party/raid or self
+  local inGroup =
+    (self.filterType=="party" and (sourceName==UnitName("player") or UnitInParty(sourceName))) or
+    (self.filterType=="raid"  and (sourceName==UnitName("player") or UnitInRaid(sourceName)))
+  if not inGroup then return end
+
+  local msg
+
+  -- spell casts / heals / auras
+  if subevent == "SPELL_CAST_SUCCESS" then
+    msg = spellName .. " → " .. (destName or "unknown")
+  elseif subevent:find("HEAL") then
+    msg = spellName .. " healed " .. (destName or "unknown")
+  elseif subevent == "SPELL_AURA_APPLIED" then
+    msg = (sourceName==UnitName("player") and "You gain " .. spellName)
+        or (spellName .. " applied to " .. (destName or "unknown"))
+  elseif subevent == "SPELL_AURA_REMOVED" then
+    msg = spellName .. " fades from " .. (destName or "unknown")
+
+  -- damage events
+  elseif subevent == "SWING_DAMAGE" then
+    local amount = select(12, CombatLogGetCurrentEventInfo())
+    msg = "Auto-attack hits " .. (destName or "unknown") .. " for " .. amount
+  elseif subevent == "RANGE_DAMAGE" or subevent == "SPELL_DAMAGE" then
+    local _, _, _, _, _, _, _, _, _, _, _, _, dmg = CombatLogGetCurrentEventInfo()
+    msg = spellName .. " hits " .. (destName or "unknown") .. " for " .. dmg
+  elseif subevent == "SPELL_PERIODIC_DAMAGE" then
+    local _, _, _, _, _, _, _, _, _, _, _, _, tick = CombatLogGetCurrentEventInfo()
+    msg = spellName .. " ticks on " .. (destName or "unknown") .. " for " .. tick
+  end
+
+  if msg then
+    AddLogLine(msg, sourceName)
+  end
+end
+
+-- event dispatcher
+RaidRecon:SetScript("OnEvent", function(self, event, ...)
+  if event == "PLAYER_LOGIN" then
+    SLASH_RAIDRECON1 = "/raidrecon"
+    SlashCmdList["RAIDRECON"] = function() RaidRecon:CreateUI() end
+  elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+    RaidRecon:ParseCombatLog()
+  end
 end)
-
--- slash to open
-SLASH_RAIDRECON1 = "/raidrecon"
-SlashCmdList["RAIDRECON"] = function() RR:CreateUI() end
-
--- load notice
-DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1RaidRecon loaded. Type /raidrecon to open.|r")
