@@ -40,9 +40,14 @@ end
 local function AddLogLine(msg,sender)
   local cls = GetClassByName(sender)
   if not cls then return end
+
   RR.logLines[cls] = RR.logLines[cls] or {}
   table.insert(RR.logLines[cls], msg)
-  if #RR.logLines[cls] > 200 then table.remove(RR.logLines[cls],1) end
+  -- ← fixed: use table.getn instead of #
+  if table.getn(RR.logLines[cls]) > 200 then
+    table.remove(RR.logLines[cls], 1)
+  end
+
   if RR.debug then
     DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1[RaidRecon]|r ["..cls.."] "..msg)
   end
@@ -53,7 +58,8 @@ end
 function RR:UpdateLogText()
   if not self.text then return end
   local buf = self.selectedClass and self.logLines[self.selectedClass]
-  if not buf or #buf==0 then
+  -- ← fixed: use table.getn instead of #
+  if not buf or table.getn(buf)==0 then
     self.text:SetText("No data for "..(self.selectedClass or "none"))
   else
     self.text:SetText(table.concat(buf,"\n"))
@@ -72,7 +78,6 @@ function RR:CreateUI()
   if self.frame then self.frame:Show() return end
   self.logLines = {}
 
-  -- Main window
   local f = CreateFrame("Frame","RRFrame",UIParent,"UIPanelDialogTemplate")
   f:SetSize(600,500)
   f:SetPoint("CENTER")
@@ -80,17 +85,18 @@ function RR:CreateUI()
   f:RegisterForDrag("LeftButton")
   f:SetScript("OnDragStart",f.StartMoving)
   f:SetScript("OnDragStop",f.StopMovingOrSizing)
+
   f.title = f:CreateFontString(nil,"OVERLAY","GameFontNormalLarge")
   f.title:SetPoint("TOP",f,"TOP",0,-12)
   f.title:SetText("Filter: "..self.filterType)
 
-  -- ChatLog toggle
+  -- ChatLog
   local cb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   cb:SetSize(100,24); cb:SetPoint("TOPLEFT",f,16,-40)
   cb:SetText("ChatLog")
   cb:SetScript("OnClick",function() SlashCmdList["CHATLOG"]("") end)
 
-  -- Filter toggle
+  -- Filter
   local fb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   fb:SetSize(100,24); fb:SetPoint("LEFT",cb,"RIGHT",8,0)
   fb:SetText("Filter: "..self.filterType)
@@ -133,11 +139,13 @@ ef:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 ef:SetScript("OnEvent",function(_,_,...)
   local _,se,_,_,src,_,_,_,dst = CombatLogGetCurrentEventInfo()
   if not src then return end
-  local inG = (RR.filterType=="party" and (src==UnitName("player") or UnitInParty(src)))
-           or (RR.filterType=="raid"  and (src==UnitName("player") or UnitInRaid(src)))
+  local inG =
+    (RR.filterType=="party" and (src==UnitName("player") or UnitInParty(src))) or
+    (RR.filterType=="raid"  and (src==UnitName("player") or UnitInRaid(src)))
   if not inG then return end
   if se~="SPELL_CAST_SUCCESS" and not se:find("HEAL")
      and se~="SPELL_AURA_APPLIED" and se~="SPELL_AURA_REMOVED" then return end
+
   local _,_,_,_,_,_,_,_,_,_,_,_,sp = CombatLogGetCurrentEventInfo()
   local msg
   if se=="SPELL_CAST_SUCCESS" then
@@ -150,6 +158,7 @@ ef:SetScript("OnEvent",function(_,_,...)
   else
     msg=sp.." fades from "..(dst or"unknown")
   end
+
   AddLogLine(msg,src)
 end)
 
@@ -158,4 +167,4 @@ SLASH_RAIDRECON1 = "/raidrecon"
 SlashCmdList["RAIDRECON"] = function() RR:CreateUI() end
 
 -- load message
-DEFAULT_CHAT_FRAME:AddMessage("|cffe5ced1RaidRecon loaded. Type /raidrecon to open.|r")
+DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1RaidRecon loaded. Type /raidrecon to open.|r")
