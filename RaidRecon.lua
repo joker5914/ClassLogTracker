@@ -7,7 +7,7 @@ local RR = RaidRecon
 RR.filterType    = "party"
 RR.selectedClass = nil
 RR.logLines      = {}
-RR.debug         = false  -- set true to print every line to chat
+RR.debug         = false  -- set true to see debug messages
 
 -- helpers
 local function mod(a,b)      return a - math.floor(a/b)*b end
@@ -31,32 +31,35 @@ local function GetClassByName(name)
     return select(2,UnitClass("player"))
   end
   for i=1,4 do
-    if normalized(UnitName("party"..i)) == n then
-      return select(2,UnitClass("party"..i))
+    local u = "party"..i
+    if normalized(UnitName(u)) == n then
+      return select(2,UnitClass(u))
     end
   end
   for i=1,40 do
-    if normalized(UnitName("raid"..i)) == n then
-      return select(2,UnitClass("raid"..i))
+    local u = "raid"..i
+    if normalized(UnitName(u)) == n then
+      return select(2,UnitClass(u))
     end
   end
   return nil
 end
 
--- record a line under the sender’s class
+-- record a log line under the sender’s class
 local function AddLogLine(msg, sender)
   local cls = GetClassByName(sender)
   if not cls then return end
 
-  local buf = RR.logLines[cls] or {}
-  table.insert(buf, msg)
-  if table.getn(buf) > 200 then
-    table.remove(buf,1)
+  RR.logLines[cls] = RR.logLines[cls] or {}
+  table.insert(RR.logLines[cls], msg)
+  if table.getn(RR.logLines[cls]) > 200 then
+    table.remove(RR.logLines[cls], 1)
   end
-  RR.logLines[cls] = buf
 
   if RR.debug then
-    DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1[RaidRecon]|r ["..cls.."] "..msg)
+    DEFAULT_CHAT_FRAME:AddMessage(
+      "|cff00ced1[RaidRecon]|r ["..cls.."] "..msg
+    )
   end
 
   if cls == RR.selectedClass then
@@ -73,7 +76,7 @@ function RR:UpdateLogText()
     return
   end
   local buf = self.logLines[cls] or {}
-  if table.getn(buf)==0 then
+  if table.getn(buf) == 0 then
     self.text:SetText("No data for "..cls.."s")
   else
     self.text:SetText(table.concat(buf, "\n"))
@@ -89,17 +92,16 @@ function RR:ToggleFilterType(btn)
   end
 end
 
--- build (or show) the UI
+-- build (or show) UI
 function RR:CreateUI()
   if self.frame then
-    self.frame:Show()
-    return
+    self.frame:Show(); return
   end
   self.logLines = {}
 
   local f = CreateFrame("Frame","RRFrame",UIParent)
-  f:SetSize(600,500)
-  f:SetPoint("CENTER")
+  f:SetWidth(600); f:SetHeight(500)
+  f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)    -- <- fixed!
   f:SetBackdrop{
     bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -109,11 +111,11 @@ function RR:CreateUI()
   f:SetBackdropColor(0,0,0,0.9)
   f:EnableMouse(true); f:SetMovable(true)
   f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", f.StartMoving)
-  f:SetScript("OnDragStop",  f.StopMovingOrSizing)
+  f:SetScript("OnDragStart", function() f:StartMoving() end)
+  f:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
   RR.frame = f
 
-  -- close button
+  -- close
   local close = CreateFrame("Button",nil,f,"UIPanelCloseButton")
   close:SetPoint("TOPRIGHT",f,-6,-6)
   close:SetScript("OnClick",function() f:Hide() end)
@@ -123,7 +125,7 @@ function RR:CreateUI()
   f.title:SetPoint("TOP",f,"TOP",0,-12)
   f.title:SetText("Filter: "..self.filterType)
 
-  -- CombatLog toggle (writes to Logs/CombatLog.txt)
+  -- CombatLog toggle
   local cb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   cb:SetSize(100,24)
   cb:SetPoint("TOPLEFT",f,16,-40)
@@ -177,49 +179,51 @@ end
 local logFrame = CreateFrame("Frame")
 logFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 logFrame:SetScript("OnEvent", function()
-  local timestamp, subEvent,
+  local _, subEvent,
         _, srcGUID, sourceName,
         _, _, dstGUID, destName = CombatLogGetCurrentEventInfo()
 
   if not sourceName then return end
 
-  -- party/raid filter
+  -- filter by party/raid
   local inG = (RR.filterType=="party" and (sourceName==UnitName("player") or UnitInParty(sourceName)))
           or (RR.filterType=="raid"  and (sourceName==UnitName("player") or UnitInRaid(sourceName)))
   if not inG then return end
 
   local msg, spellName, amount
 
-  if subEvent=="SPELL_CAST_START" then
+  -- your previous buff/aura parsing...
+  if subEvent == "SPELL_CAST_START" then
     spellName = select(13, CombatLogGetCurrentEventInfo())
     msg = "begins to cast "..spellName
 
-  elseif subEvent=="SPELL_CAST_SUCCESS" then
+  elseif subEvent == "SPELL_CAST_SUCCESS" then
     spellName = select(13, CombatLogGetCurrentEventInfo())
     msg = spellName.." → "..(destName or "unknown")
 
   elseif subEvent:find("HEAL") then
-    spellName,amount = select(13, CombatLogGetCurrentEventInfo())
+    spellName, amount = select(13, CombatLogGetCurrentEventInfo())
     msg = spellName.." healed "..(destName or "unknown").." for "..amount
 
-  elseif subEvent=="SPELL_AURA_APPLIED" then
+  elseif subEvent == "SPELL_AURA_APPLIED" then
     spellName = select(13, CombatLogGetCurrentEventInfo())
     msg = (sourceName==UnitName("player") and "You gain "..spellName)
         or (spellName.." applied to "..(destName or "unknown"))
 
-  elseif subEvent=="SPELL_AURA_REMOVED" then
+  elseif subEvent == "SPELL_AURA_REMOVED" then
     spellName = select(13, CombatLogGetCurrentEventInfo())
     msg = spellName.." fades from "..(destName or "unknown")
 
-  elseif subEvent=="SWING_DAMAGE" then
+  -- damage events
+  elseif subEvent == "SWING_DAMAGE" then
     amount = select(12, CombatLogGetCurrentEventInfo())
     msg = "Auto-attack hits "..(destName or "unknown").." for "..amount
 
-  elseif subEvent=="SPELL_DAMAGE" or subEvent=="RANGE_DAMAGE" then
+  elseif subEvent == "SPELL_DAMAGE" or subEvent == "RANGE_DAMAGE" then
     spellName,amount = select(13, CombatLogGetCurrentEventInfo())
     msg = spellName.." hits "..(destName or "unknown").." for "..amount
 
-  elseif subEvent=="SPELL_PERIODIC_DAMAGE" then
+  elseif subEvent == "SPELL_PERIODIC_DAMAGE" then
     spellName,amount = select(13, CombatLogGetCurrentEventInfo())
     msg = spellName.." ticks on "..(destName or "unknown").." for "..amount
   end
