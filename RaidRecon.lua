@@ -1,8 +1,8 @@
 -- RaidRecon.lua
 
 local RaidRecon = CreateFrame("Frame")
-RaidRecon:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 RaidRecon:RegisterEvent("PLAYER_LOGIN")
+RaidRecon:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
 local classList = {
   "Warrior","Paladin","Priest","Rogue","Warlock",
@@ -17,74 +17,73 @@ local classColors = {
 RaidRecon.filterType    = "party"
 RaidRecon.logLines      = {}
 RaidRecon.selectedClass = nil
+RaidRecon.frame         = nil
+RaidRecon.text          = nil
 
--- normalize a unit name for matching
-local function normalized(s)
-  return (s or ""):lower():gsub("[^%a]","")
+-- normalize unit names for matching
+local function normalized(name)
+  return (name or ""):lower():gsub("[^%a]","")
 end
 
--- find class by unit name
+-- map a unit name to class token
 local function GetClassByName(name)
   local n = normalized(name)
   if normalized(UnitName("player")) == n then
-    return UnitClass("player")
+    return select(2, UnitClass("player"))
   end
-  for i=1,4 do
-    if normalized(UnitName("party"..i)) == n then
-      return UnitClass("party"..i)
+  for i = 1, 4 do
+    local unit = "party"..i
+    if normalized(UnitName(unit)) == n then
+      return select(2, UnitClass(unit))
     end
   end
-  for i=1,40 do
-    if normalized(UnitName("raid"..i)) == n then
-      return UnitClass("raid"..i)
+  for i = 1, 40 do
+    local unit = "raid"..i
+    if normalized(UnitName(unit)) == n then
+      return select(2, UnitClass(unit))
     end
   end
   return nil
 end
 
--- record a log line under the right class
+-- record a log line under the appropriate class
 local function AddLogLine(msg, sender)
   local cls = GetClassByName(sender)
   if not cls then return end
-
   RaidRecon.logLines[cls] = RaidRecon.logLines[cls] or {}
   table.insert(RaidRecon.logLines[cls], msg)
   if table.getn(RaidRecon.logLines[cls]) > 200 then
     table.remove(RaidRecon.logLines[cls], 1)
   end
-
   if cls == RaidRecon.selectedClass then
     RaidRecon:UpdateLogText()
   end
 end
 
--- redraw the EditBox
+-- update the scrollable EditBox text
 function RaidRecon:UpdateLogText()
   if not self.text then return end
-
   local cls = self.selectedClass
   if not cls then
     self.text:SetText("No class selected")
     return
   end
-
   local buf = self.logLines[cls] or {}
   if table.getn(buf) == 0 then
-    -- pluralize by adding “s”
     self.text:SetText("No data for " .. cls .. "s")
   else
     self.text:SetText(table.concat(buf, "\n"))
   end
 end
 
--- build (or show) the UI
+-- build or show the main UI
 function RaidRecon:CreateUI()
   if self.frame then
     self.frame:Show()
     return
   end
 
-  -- main window
+  -- main frame
   local f = CreateFrame("Frame", "RaidReconFrame", UIParent, "BasicFrameTemplateWithInset")
   f:SetSize(600, 400)
   f:SetPoint("CENTER")
@@ -92,13 +91,12 @@ function RaidRecon:CreateUI()
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
   f:SetScript("OnDragStart", f.StartMoving)
-  f:SetScript("OnDragStop",  f.StopMovingOrSizing)
+  f:SetScript("OnDragStop", f.StopMovingOrSizing)
   f:SetClampedToScreen(true)
   self.frame = f
 
   -- title text
-  f.title = f:CreateFontString(nil, "OVERLAY")
-  f.title:SetFontObject("GameFontHighlight")
+  f.title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   f.title:SetPoint("LEFT", f.TitleBg, "LEFT", 5, 0)
   f.title:SetText("Filter: " .. self.filterType)
 
@@ -107,85 +105,81 @@ function RaidRecon:CreateUI()
   close:SetPoint("TOPRIGHT", f, "TOPRIGHT")
   close:SetScript("OnClick", function() f:Hide() end)
 
-  -- scrollable output
-  local scrollFrame = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
-  scrollFrame:SetPoint("TOPLEFT",     f, "TOPLEFT",     10, -40)
-  scrollFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -30, 10)
+  -- scroll frame for output
+  local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -40)
+  scroll:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -30, 10)
 
-  local editBox = CreateFrame("EditBox", nil, scrollFrame)
-  editBox:SetMultiLine(true)
-  editBox:SetFontObject(ChatFontNormal)
-  editBox:SetWidth(540)
-  editBox:SetAutoFocus(false)
-  editBox:SetScript("OnEscapePressed", editBox.ClearFocus)
-  scrollFrame:SetScrollChild(editBox)
-  self.text = editBox
+  local edit = CreateFrame("EditBox", nil, scroll)
+  edit:SetMultiLine(true)
+  edit:SetFontObject(ChatFontNormal)
+  edit:SetWidth(540)
+  edit:SetAutoFocus(false)
+  edit:SetScript("OnEscapePressed", edit.ClearFocus)
+  scroll:SetScrollChild(edit)
+  self.text = edit
 
   -- class buttons
   local btnFrame = CreateFrame("Frame", nil, f)
   btnFrame:SetSize(580, 30)
   btnFrame:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
 
-  local xOffset = 0
+  local xOff = 0
   for _, cls in ipairs(classList) do
     local b = CreateFrame("Button", nil, btnFrame, "UIPanelButtonTemplate")
     b:SetSize(60, 20)
-    b:SetPoint("TOPLEFT", xOffset, 0)
+    b:SetPoint("TOPLEFT", xOff, 0)
     b:SetText(cls)
-    local r,g,bc = unpack(classColors[cls])
-    b:GetFontString():SetTextColor(r,g,bc)
+    local r,g,bcol = unpack(classColors[cls])
+    b:GetFontString():SetTextColor(r, g, bcol)
     b:SetScript("OnClick", function()
-      self.selectedClass = cls
-      f.title:SetText("Filter: " .. self.filterType .. " | Class: " .. cls)
-      self:UpdateLogText()
+      RaidRecon.selectedClass = cls
+      f.title:SetText("Filter: " .. RaidRecon.filterType .. " | Class: " .. cls)
+      RaidRecon:UpdateLogText()
     end)
-    xOffset = xOffset + 65
+    xOff = xOff + 65
   end
 
-  -- default to first class
+  -- default selection
   self.selectedClass = classList[1]
   f.title:SetText("Filter: " .. self.filterType .. " | Class: " .. self.selectedClass)
   self:UpdateLogText()
 end
 
--- parse all key combat-log events (damage + buff/aura)
+-- parse combat log for buff/aura and damage events
 function RaidRecon:ParseCombatLog()
-  local timestamp, subevent,
-        _, srcGUID, sourceName, srcFlags,
-        _, dstGUID, destName, dstFlags,
-        spellID, spellName = CombatLogGetCurrentEventInfo()
-
+  local _, subEvent, _, srcGUID, sourceName, _, _, destGUID, destName = CombatLogGetCurrentEventInfo()
   if not sourceName then return end
 
-  -- only track party/raid or self
-  local inGroup =
-    (self.filterType=="party" and (sourceName==UnitName("player") or UnitInParty(sourceName))) or
-    (self.filterType=="raid"  and (sourceName==UnitName("player") or UnitInRaid(sourceName)))
+  -- filter by party/raid
+  local inGroup = (self.filterType=="party" and (sourceName==UnitName("player") or UnitInParty(sourceName)))
+               or (self.filterType=="raid"  and (sourceName==UnitName("player") or UnitInRaid(sourceName)))
   if not inGroup then return end
 
-  local msg
+  local msg, spellName, amount
 
-  -- spell casts / heals / auras
-  if subevent == "SPELL_CAST_SUCCESS" then
+  if subEvent == "SPELL_CAST_SUCCESS" then
+    _,_,_,_,_,_,_,_,_,_,_,_,spellName = CombatLogGetCurrentEventInfo()
     msg = spellName .. " → " .. (destName or "unknown")
-  elseif subevent:find("HEAL") then
+  elseif subEvent:find("HEAL") then
+    _,_,_,_,_,_,_,_,_,_,_,_,spellName, amount = CombatLogGetCurrentEventInfo()
     msg = spellName .. " healed " .. (destName or "unknown")
-  elseif subevent == "SPELL_AURA_APPLIED" then
+  elseif subEvent == "SPELL_AURA_APPLIED" then
+    _,_,_,_,_,_,_,_,_,_,_,_,spellName = CombatLogGetCurrentEventInfo()
     msg = (sourceName==UnitName("player") and "You gain " .. spellName)
         or (spellName .. " applied to " .. (destName or "unknown"))
-  elseif subevent == "SPELL_AURA_REMOVED" then
+  elseif subEvent == "SPELL_AURA_REMOVED" then
+    _,_,_,_,_,_,_,_,_,_,_,_,spellName = CombatLogGetCurrentEventInfo()
     msg = spellName .. " fades from " .. (destName or "unknown")
-
-  -- damage events
-  elseif subevent == "SWING_DAMAGE" then
-    local amount = select(12, CombatLogGetCurrentEventInfo())
+  elseif subEvent == "SWING_DAMAGE" then
+    _,_,_,_,_,_,_,_,_,_,_,amount = CombatLogGetCurrentEventInfo()
     msg = "Auto-attack hits " .. (destName or "unknown") .. " for " .. amount
-  elseif subevent == "RANGE_DAMAGE" or subevent == "SPELL_DAMAGE" then
-    local _, _, _, _, _, _, _, _, _, _, _, _, dmg = CombatLogGetCurrentEventInfo()
-    msg = spellName .. " hits " .. (destName or "unknown") .. " for " .. dmg
-  elseif subevent == "SPELL_PERIODIC_DAMAGE" then
-    local _, _, _, _, _, _, _, _, _, _, _, _, tick = CombatLogGetCurrentEventInfo()
-    msg = spellName .. " ticks on " .. (destName or "unknown") .. " for " .. tick
+  elseif subEvent == "SPELL_DAMAGE" or subEvent == "RANGE_DAMAGE" then
+    _,_,_,_,_,_,_,_,_,_,_,_,spellName, amount = CombatLogGetCurrentEventInfo()
+    msg = spellName .. " hits " .. (destName or "unknown") .. " for " .. amount
+  elseif subEvent == "SPELL_PERIODIC_DAMAGE" then
+    _,_,_,_,_,_,_,_,_,_,_,_,spellName, amount = CombatLogGetCurrentEventInfo()
+    msg = spellName .. " ticks on " .. (destName or "unknown") .. " for " .. amount
   end
 
   if msg then
@@ -193,7 +187,7 @@ function RaidRecon:ParseCombatLog()
   end
 end
 
--- event dispatcher
+-- event dispatch
 RaidRecon:SetScript("OnEvent", function(self, event, ...)
   if event == "PLAYER_LOGIN" then
     SLASH_RAIDRECON1 = "/raidrecon"
