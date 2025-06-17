@@ -23,195 +23,166 @@ local classColors = {
   Shaman={0,0.44,0.87},  Druid={1,0.49,0.04},     Hunter={0.67,0.83,0.45},
 }
 
--- map unit name → class
+-- find class by unit name
 local function GetClassByName(name)
-  local n = normalized(name)
-  if normalized(UnitName("player")) == n then
-    return UnitClass("player")
+  local n=normalized(name)
+  if normalized(UnitName("player"))==n then return UnitClass("player") end
+  for i=1,4 do
+    if normalized(UnitName("party"..i))==n then return UnitClass("party"..i) end
   end
-  for i = 1, 4 do
-    if normalized(UnitName("party"..i)) == n then
-      return UnitClass("party"..i)
-    end
-  end
-  for i = 1, 40 do
-    if normalized(UnitName("raid"..i)) == n then
-      return UnitClass("raid"..i)
-    end
+  for i=1,40 do
+    if normalized(UnitName("raid"..i))==n then return UnitClass("raid"..i) end
   end
   return nil
 end
 
--- record a log line
-local function AddLogLine(msg, sender)
-  local cls = GetClassByName(sender)
+-- add a line to the class log
+local function AddLogLine(msg,sender)
+  local cls=GetClassByName(sender)
   if not cls then return end
-
-  RR.logLines[cls] = RR.logLines[cls] or {}
-  table.insert(RR.logLines[cls], msg)
-  if table.getn(RR.logLines[cls]) > 200 then
-    table.remove(RR.logLines[cls], 1)
+  RR.logLines[cls]=RR.logLines[cls] or {}
+  table.insert(RR.logLines[cls],msg)
+  if table.getn(RR.logLines[cls])>200 then
+    table.remove(RR.logLines[cls],1)
   end
-
   if RR.debug then
     DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1[RaidRecon Debug]|r ["..cls.."] "..msg)
   end
-
-  if cls == RR.selectedClass then
+  if cls==RR.selectedClass then
     RR:UpdateLogText()
   end
 end
 
--- update the EditBox
+-- redraw the EditBox
 function RR:UpdateLogText()
   if not self.text then return end
-  local buf = self.selectedClass and self.logLines[self.selectedClass]
-  if not buf or table.getn(buf) == 0 then
+  local buf=self.selectedClass and self.logLines[self.selectedClass]
+  if not buf or table.getn(buf)==0 then
     self.text:SetText("No data for "..(self.selectedClass or "none"))
   else
-    self.text:SetText(table.concat(buf, "\n"))
+    self.text:SetText(table.concat(buf,"\n"))
   end
 end
 
--- toggle party/raid filter
+-- toggle party/raid
 function RR:ToggleFilterType(button)
-  self.filterType = (self.filterType == "party") and "raid" or "party"
-  if button then
-    button:SetText("Filter: "..self.filterType)
-  end
-  if self.frame then
-    self.frame.title:SetText("Filter: "..self.filterType)
-  end
+  RR.filterType = (RR.filterType=="party") and "raid" or "party"
+  if button then button:SetText("Filter: "..RR.filterType) end
+  if RR.frame then RR.frame.title:SetText("Filter: "..RR.filterType) end
 end
 
--- build or show the UI
+-- build or show UI
 function RR:CreateUI()
-  if self.frame then
-    self.frame:Show()
+  if RR.frame then
+    RR.frame:Show()
     return
   end
-  self.logLines = {}
+  RR.logLines={}
 
-  -- main frame
-  local f = CreateFrame("Frame", "RRFrame", UIParent)
-  f:SetWidth(600)
-  f:SetHeight(500)
-  f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-
+  local f=CreateFrame("Frame","RRFrame",UIParent)
+  -- size & position
+  f:SetWidth(600); f:SetHeight(500)
+  f:SetPoint("CENTER",UIParent,"CENTER",0,0)
   -- backdrop
   f:SetBackdrop{
-    bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile     = true, tileSize = 16, edgeSize = 16,
-    insets   = { left = 4, right = 4, top = 4, bottom = 4 },
+    bgFile="Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",
+    tile=true,tileSize=16,edgeSize=16,
+    insets={left=4,right=4,top=4,bottom=4},
   }
-  f:SetBackdropColor(0, 0, 0, 0.9)
-
-  -- make movable
+  f:SetBackdropColor(0,0,0,0.9)
+  -- drag
   f:EnableMouse(true)
   f:SetMovable(true)
   f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", function(self) self:StartMoving() end)
-  f:SetScript("OnDragStop",  function(self) self:StopMovingOrSizing() end)
-
+  f:SetScript("OnDragStart", function() f:StartMoving() end)
+  f:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
   -- close button
-  local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", f, -6, -6)
-  close:SetScript("OnClick", function(self) self:GetParent():Hide() end)
-
+  local close=CreateFrame("Button",nil,f,"UIPanelCloseButton")
+  close:SetPoint("TOPRIGHT",f,"TOPRIGHT",-6,-6)
+  close:SetScript("OnClick", function() f:Hide() end)
   -- title text
-  f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-  f.title:SetPoint("TOP", f, "TOP", 0, -12)
-  f.title:SetText("Filter: "..self.filterType)
-
+  f.title=f:CreateFontString(nil,"OVERLAY","GameFontNormalLarge")
+  f.title:SetPoint("TOP",f,"TOP",0,-12)
+  f.title:SetText("Filter: "..RR.filterType)
   -- ChatLog toggle
-  local cb = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  local cb=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   cb:SetWidth(100); cb:SetHeight(24)
-  cb:SetPoint("TOPLEFT", f, 16, -40)
+  cb:SetPoint("TOPLEFT",f,16,-40)
   cb:SetText("ChatLog")
   cb:SetScript("OnClick", function() SlashCmdList["CHATLOG"]("") end)
-
   -- Filter toggle
-  local fb = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  local fb=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
   fb:SetWidth(100); fb:SetHeight(24)
-  fb:SetPoint("LEFT", cb, "RIGHT", 8, 0)
-  fb:SetText("Filter: "..self.filterType)
+  fb:SetPoint("LEFT",cb,"RIGHT",8,0)
+  fb:SetText("Filter: "..RR.filterType)
   fb:SetScript("OnClick", function() RR:ToggleFilterType(fb) end)
-  self.filterButton = fb
-
+  RR.filterButton=fb
   -- class buttons
-  local perRow, sx, sy = 6, 90, 28
-  local ox, oy = 16, -80
-  for i, cls in ipairs(classList) do
-    local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  local perRow,sx,sy=6,90,28
+  local ox,oy=16,-80
+  for i,cls in ipairs(classList) do
+    local btn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     btn:SetWidth(80); btn:SetHeight(24)
-    local row = math.floor((i-1)/perRow)
-    local col = mod(i-1, perRow)
-    btn:SetPoint("TOPLEFT", f, ox + col*sx, oy - row*sy)
+    local row=math.floor((i-1)/perRow)
+    local col=mod(i-1,perRow)
+    btn:SetPoint("TOPLEFT",f,ox+col*sx,oy-row*sy)
     btn:SetText(cls)
-    local r,g,b = unpack(classColors[cls])
-    btn:GetFontString():SetTextColor(r, g, b)
+    local r,g,b=unpack(classColors[cls])
+    btn:GetFontString():SetTextColor(r,g,b)
     btn:SetScript("OnClick", function() 
-      RR.selectedClass = cls 
+      RR.selectedClass=cls
       RR:UpdateLogText()
     end)
   end
-
-  -- scrollable log area
-  local scroll = CreateFrame("ScrollFrame", "RRScroll", f, "UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT", f, 16, -250)
-  scroll:SetPoint("BOTTOMRIGHT", f, -32, 16)
-
-  local edit = CreateFrame("EditBox", nil, scroll)
+  -- scroll area
+  local scroll=CreateFrame("ScrollFrame","RRScroll",f,"UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT",f,16,-250)
+  scroll:SetPoint("BOTTOMRIGHT",f,-32,16)
+  local edit=CreateFrame("EditBox",nil,scroll)
   edit:SetMultiLine(true)
   edit:SetFontObject(ChatFontNormal)
   edit:SetWidth(540)
   edit:SetAutoFocus(false)
-  edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  edit:SetScript("OnEscapePressed",function() edit:ClearFocus() end)
   scroll:SetScrollChild(edit)
-  self.text = edit
-
-  self.frame = f
+  RR.text=edit
+  RR.frame=f
 end
 
 -- combat-log hook
-local ef = CreateFrame("Frame")
+local ef=CreateFrame("Frame")
 ef:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-ef:SetScript("OnEvent", function(_, _, ...)
-  local _, se, _, _, src, _, _, _, dst = CombatLogGetCurrentEventInfo()
+ef:SetScript("OnEvent",function(_,_,...)
+  local _,se,_,_,src,_,_,_,dst=CombatLogGetCurrentEventInfo()
   if not src then return end
-
-  local inG =
-    (RR.filterType=="party" and (src==UnitName("player") or UnitInParty(src))) or
-    (RR.filterType=="raid"  and (src==UnitName("player") or UnitInRaid(src)))
+  local inG=(RR.filterType=="party" and (src==UnitName("player") or UnitInParty(src)))
+           or (RR.filterType=="raid"  and (src==UnitName("player") or UnitInRaid(src)))
   if not inG then return end
-
   if se~="SPELL_CAST_SUCCESS"
      and not se:find("HEAL")
      and se~="SPELL_AURA_APPLIED"
      and se~="SPELL_AURA_REMOVED" then
     return
   end
-
-  local _,_,_,_,_,_,_,_,_,_,_,_,sp = CombatLogGetCurrentEventInfo()
+  local _,_,_,_,_,_,_,_,_,_,_,_,sp=CombatLogGetCurrentEventInfo()
   local msg
   if se=="SPELL_CAST_SUCCESS" then
-    msg = sp.." → "..(dst or "unknown")
+    msg=sp.." → "..(dst or"unknown")
   elseif se:find("HEAL") then
-    msg = sp.." healed "..(dst or "unknown")
+    msg=sp.." healed "..(dst or"unknown")
   elseif se=="SPELL_AURA_APPLIED" then
-    msg = (src==UnitName("player") and "You gain "..sp)
-        or (sp.." applied to "..(dst or "unknown"))
+    msg=(src==UnitName("player") and "You gain "..sp)
+        or(sp.." applied to "..(dst or"unknown"))
   else
-    msg = sp.." fades from "..(dst or "unknown")
+    msg=sp.." fades from "..(dst or"unknown")
   end
-
-  AddLogLine(msg, src)
+  AddLogLine(msg,src)
 end)
 
--- slash command
-SLASH_RAIDRECON1 = "/raidrecon"
-SlashCmdList["RAIDRECON"] = function() RR:CreateUI() end
+-- slash to open
+SLASH_RAIDRECON1="/raidrecon"
+SlashCmdList["RAIDRECON"]=function() RR:CreateUI() end
 
 -- load message
 DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1RaidRecon loaded. Type /raidrecon to open.|r")
