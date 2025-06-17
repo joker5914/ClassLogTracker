@@ -68,10 +68,13 @@ end
 -- redraw the textbox
 function RR:UpdateLogText()
   if not self.text then return end
-  local cls = self.selectedClass
+  -- pick a class (fallback to the first one)
+  local cls = self.selectedClass or classList[1]
+  self.selectedClass = cls
+
   local buf = self.logLines[cls] or {}
   if table.getn(buf) == 0 then
-    self.text:SetText("No data for "..cls.."s")
+    self.text:SetText("No data for " .. cls .. "s")
   else
     self.text:SetText(table.concat(buf, "\n"))
   end
@@ -169,6 +172,25 @@ function RR:CreateUI()
   RR.selectedClass = classList[1]
   RR:UpdateLogText()
 end
+
+local chatCapture = CreateFrame("Frame")
+for _, ev in ipairs({
+  "CHAT_MSG_SPELL_SELF_DAMAGE",
+  "CHAT_MSG_COMBAT_SELF_HITS",
+  "CHAT_MSG_SPELL_PARTY_DAMAGE",
+  "CHAT_MSG_COMBAT_PARTY_HITS",
+  "CHAT_MSG_SPELL_FRIENDLYPLAYER_DAMAGE",
+  "CHAT_MSG_COMBAT_FRIENDLYPLAYER_HITS",
+}) do
+  chatCapture:RegisterEvent(ev)
+end
+chatCapture:SetScript("OnEvent", function(self, event, msg, sender)
+  if type(msg) ~= "string" or msg == "" then return end
+
+  -- normalize sender (strip realm)
+  sender = (sender or UnitName("player")):match("^[^-]+")
+  AddLogLine(msg, sender)
+end)
 
 -- COMBAT_LOG_EVENT_UNFILTERED (buff/aura & damage)
 local logFrame = CreateFrame("Frame")
