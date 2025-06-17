@@ -7,7 +7,7 @@ local RR = RaidRecon
 RR.filterType    = "party"
 RR.selectedClass = nil
 RR.logLines      = {}
-RR.debug         = false  -- set true for debug messages
+RR.debug         = false  -- set true to see debug lines in chat
 
 -- helpers
 local function mod(a,b)      return a - math.floor(a/b)*b end
@@ -28,16 +28,18 @@ local classColors = {
 local function GetClassByName(name)
   local n = normalized(name)
   if normalized(UnitName("player")) == n then
-    return select(2, UnitClass("player"))
+    return select(2,UnitClass("player"))
   end
   for i=1,4 do
-    if normalized(UnitName("party"..i)) == n then
-      return select(2, UnitClass("party"..i))
+    local u = "party"..i
+    if normalized(UnitName(u)) == n then
+      return select(2,UnitClass(u))
     end
   end
   for i=1,40 do
-    if normalized(UnitName("raid"..i)) == n then
-      return select(2, UnitClass("raid"..i))
+    local u = "raid"..i
+    if normalized(UnitName(u)) == n then
+      return select(2,UnitClass(u))
     end
   end
   return nil
@@ -55,7 +57,9 @@ local function AddLogLine(msg, sender)
   end
 
   if RR.debug then
-    DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1[RaidRecon]|r ["..cls.."] "..msg)
+    DEFAULT_CHAT_FRAME:AddMessage(
+      "|cff00ced1[RaidRecon]|r ["..cls.."] "..msg
+    )
   end
 
   if cls == RR.selectedClass then
@@ -66,16 +70,14 @@ end
 -- redraw the EditBox
 function RR:UpdateLogText()
   if not self.text then return end
-
   local cls = self.selectedClass
   if not cls then
     self.text:SetText("No class selected")
     return
   end
-
   local buf = self.logLines[cls] or {}
   if table.getn(buf) == 0 then
-    self.text:SetText("No data for " .. cls .. "s")
+    self.text:SetText("No data for "..cls.."s")
   else
     self.text:SetText(table.concat(buf, "\n"))
   end
@@ -93,14 +95,13 @@ end
 -- build (or show) UI
 function RR:CreateUI()
   if self.frame then
-    self.frame:Show()
-    return
+    self.frame:Show(); return
   end
   self.logLines = {}
 
   local f = CreateFrame("Frame","RRFrame",UIParent)
   f:SetWidth(600); f:SetHeight(500)
-  f:SetPoint("CENTER",UIParent,"CENTER",0,0)
+  f:SetPoint("CENTER")
   f:SetBackdrop{
     bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -110,30 +111,30 @@ function RR:CreateUI()
   f:SetBackdropColor(0,0,0,0.9)
   f:EnableMouse(true); f:SetMovable(true)
   f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", function() f:StartMoving() end)
-  f:SetScript("OnDragStop",  function() f:StopMovingOrSizing() end)
+  f:SetScript("OnDragStart", f.StartMoving)
+  f:SetScript("OnDragStop",  f.StopMovingOrSizing)
   RR.frame = f
 
-  -- close button
+  -- close
   local close = CreateFrame("Button",nil,f,"UIPanelCloseButton")
   close:SetPoint("TOPRIGHT",f,-6,-6)
-  close:SetScript("OnClick", function() f:Hide() end)
+  close:SetScript("OnClick",function() f:Hide() end)
 
   -- title
   f.title = f:CreateFontString(nil,"OVERLAY","GameFontNormalLarge")
   f.title:SetPoint("TOP",f,"TOP",0,-12)
   f.title:SetText("Filter: "..self.filterType)
 
-  -- CombatLog toggle (file logging)
+  -- CombatLog toggle (writes to file)
   local cb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-  cb:SetWidth(100); cb:SetHeight(24)
+  cb:SetSize(100,24)
   cb:SetPoint("TOPLEFT",f,16,-40)
   cb:SetText("CombatLog")
   cb:SetScript("OnClick",function() SlashCmdList["COMBATLOG"]("") end)
 
-  -- Filter toggle
+  -- filter toggle
   local fb = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-  fb:SetWidth(100); fb:SetHeight(24)
+  fb:SetSize(100,24)
   fb:SetPoint("LEFT",cb,"RIGHT",8,0)
   fb:SetText("Filter: "..self.filterType)
   fb:SetScript("OnClick",function() RR:ToggleFilterType(fb) end)
@@ -143,7 +144,7 @@ function RR:CreateUI()
   local perRow,sx,sy,ox,oy = 6,90,28,16,-80
   for i,cls in ipairs(classList) do
     local btn = CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-    btn:SetWidth(80); btn:SetHeight(24)
+    btn:SetSize(80,24)
     local row = math.floor((i-1)/perRow)
     local col = mod(i-1,perRow)
     btn:SetPoint("TOPLEFT",f,ox+col*sx,oy-row*sy)
@@ -169,12 +170,12 @@ function RR:CreateUI()
   scroll:SetScrollChild(edit)
   RR.text = edit
 
-  -- default to first class
+  -- default
   RR.selectedClass = classList[1]
   RR:UpdateLogText()
 end
 
--- legacy combat-text events (buffs, heals, etc)
+-- legacy chat‐based combat events (buffs/heals/damage)
 local eventFrame = CreateFrame("Frame")
 for _,ev in ipairs({
   "CHAT_MSG_SPELL_SELF_BUFF","CHAT_MSG_SPELL_SELF_DAMAGE",
@@ -193,38 +194,42 @@ for _,ev in ipairs({
 end
 eventFrame:SetScript("OnEvent",function(self,_,msg,sender)
   if type(msg)~="string" or msg=="" then return end
+  -- strip realm
   if sender then sender=sender:match("^[^-]+") end
-  if (not sender or sender=="") and msg:find("^You ") then
+  -- map "You" *and* "Your" prefixes to player
+  if (not sender or sender=="") and (msg:find("^You ") or msg:find("^Your ")) then
     sender = UnitName("player")
   elseif not sender or sender=="" then
     return
   end
-  AddLogLine(msg,sender)
+  AddLogLine(msg, sender)
 end)
 
--- COMBAT_LOG_EVENT_UNFILTERED for damage
+-- COMBAT_LOG_EVENT_UNFILTERED for detailed damage
 local dmgFrame = CreateFrame("Frame")
 dmgFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 dmgFrame:SetScript("OnEvent", function(self)
-  local _, sub, _, _, srcName, _, _, _, dstName = CombatLogGetCurrentEventInfo()
-  if not srcName then return end
-  local inGroup = (RR.filterType=="party" and (srcName==UnitName("player") or UnitInParty(srcName)))
-               or (RR.filterType=="raid"  and (srcName==UnitName("player") or UnitInRaid(srcName)))
-  if not inGroup then return end
+  local _, sub, _, _, sourceName, _, _, _, destName = CombatLogGetCurrentEventInfo()
+  if not sourceName then return end
+
+  -- in group?
+  local inG = (RR.filterType=="party" and (sourceName==UnitName("player") or UnitInParty(sourceName)))
+          or (RR.filterType=="raid"  and (sourceName==UnitName("player") or UnitInRaid(sourceName)))
+  if not inG then return end
 
   local msg
-  if sub == "SWING_DAMAGE" then
+  if sub=="SWING_DAMAGE" then
     local amount = select(12, CombatLogGetCurrentEventInfo())
-    msg = "Auto-attack hits "..(dstName or "unknown").." for "..amount
+    msg = "Auto-attack hits "..(destName or "unknown").." for "..amount
   elseif sub=="SPELL_DAMAGE" or sub=="RANGE_DAMAGE" then
-    local spellName, amount = select(13, CombatLogGetCurrentEventInfo())
-    msg = spellName.." hits "..(dstName or "unknown").." for "..amount
+    local spellName,amount = select(13, CombatLogGetCurrentEventInfo())
+    msg = spellName.." hits "..(destName or "unknown").." for "..amount
   elseif sub=="SPELL_PERIODIC_DAMAGE" then
-    local spellName, amount = select(13, CombatLogGetCurrentEventInfo())
-    msg = spellName.." ticks on "..(dstName or "unknown").." for "..amount
+    local spellName,amount = select(13, CombatLogGetCurrentEventInfo())
+    msg = spellName.." ticks on "..(destName or "unknown").." for "..amount
   end
 
-  if msg then AddLogLine(msg, srcName) end
+  if msg then AddLogLine(msg, sourceName) end
 end)
 
 -- slash to open
