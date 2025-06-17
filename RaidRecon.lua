@@ -23,7 +23,7 @@ local classColors = {
   Shaman={0,0.44,0.87},  Druid={1,0.49,0.04},     Hunter={0.67,0.83,0.45},
 }
 
--- look up class from a unit name
+-- map unit name → class
 local function GetClassByName(name)
   local n = normalized(name)
   if normalized(UnitName("player")) == n then
@@ -42,7 +42,7 @@ local function GetClassByName(name)
   return nil
 end
 
--- record a log line under its class
+-- record a log line
 local function AddLogLine(msg, sender)
   local cls = GetClassByName(sender)
   if not cls then return end
@@ -54,9 +54,7 @@ local function AddLogLine(msg, sender)
   end
 
   if RR.debug then
-    DEFAULT_CHAT_FRAME:AddMessage(
-      "|cff00ced1[RaidRecon Debug]|r ["..cls.."] "..msg
-    )
+    DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1[RaidRecon Debug]|r ["..cls.."] "..msg)
   end
 
   if cls == RR.selectedClass then
@@ -64,7 +62,7 @@ local function AddLogLine(msg, sender)
   end
 end
 
--- redraw the edit box
+-- update the EditBox
 function RR:UpdateLogText()
   if not self.text then return end
   local buf = self.selectedClass and self.logLines[self.selectedClass]
@@ -78,11 +76,15 @@ end
 -- toggle party/raid filter
 function RR:ToggleFilterType(button)
   self.filterType = (self.filterType == "party") and "raid" or "party"
-  if button then button:SetText("Filter: "..self.filterType) end
-  if self.frame then self.frame.title:SetText("Filter: "..self.filterType) end
+  if button then
+    button:SetText("Filter: "..self.filterType)
+  end
+  if self.frame then
+    self.frame.title:SetText("Filter: "..self.filterType)
+  end
 end
 
--- build (or show) the UI
+-- build or show the UI
 function RR:CreateUI()
   if self.frame then
     self.frame:Show()
@@ -90,10 +92,13 @@ function RR:CreateUI()
   end
   self.logLines = {}
 
+  -- main frame
   local f = CreateFrame("Frame", "RRFrame", UIParent)
-  f:SetWidth(600); f:SetHeight(500)
+  f:SetWidth(600)
+  f:SetHeight(500)
   f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 
+  -- backdrop
   f:SetBackdrop{
     bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -102,16 +107,17 @@ function RR:CreateUI()
   }
   f:SetBackdropColor(0, 0, 0, 0.9)
 
+  -- make movable
   f:EnableMouse(true)
   f:SetMovable(true)
   f:RegisterForDrag("LeftButton")
-  f:SetScript("OnDragStart", f.StartMoving)
-  f:SetScript("OnDragStop",  f.StopMovingOrSizing)
+  f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+  f:SetScript("OnDragStop",  function(self) self:StopMovingOrSizing() end)
 
   -- close button
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", f, -6, -6)
-  close:SetScript("OnClick", function() f:Hide() end)
+  close:SetScript("OnClick", function(self) self:GetParent():Hide() end)
 
   -- title text
   f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -120,14 +126,14 @@ function RR:CreateUI()
 
   -- ChatLog toggle
   local cb = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  cb:SetSize(100, 24)
+  cb:SetWidth(100); cb:SetHeight(24)
   cb:SetPoint("TOPLEFT", f, 16, -40)
   cb:SetText("ChatLog")
   cb:SetScript("OnClick", function() SlashCmdList["CHATLOG"]("") end)
 
   -- Filter toggle
   local fb = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  fb:SetSize(100, 24)
+  fb:SetWidth(100); fb:SetHeight(24)
   fb:SetPoint("LEFT", cb, "RIGHT", 8, 0)
   fb:SetText("Filter: "..self.filterType)
   fb:SetScript("OnClick", function() RR:ToggleFilterType(fb) end)
@@ -138,15 +144,15 @@ function RR:CreateUI()
   local ox, oy = 16, -80
   for i, cls in ipairs(classList) do
     local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    btn:SetSize(80, 24)
+    btn:SetWidth(80); btn:SetHeight(24)
     local row = math.floor((i-1)/perRow)
     local col = mod(i-1, perRow)
     btn:SetPoint("TOPLEFT", f, ox + col*sx, oy - row*sy)
     btn:SetText(cls)
     local r,g,b = unpack(classColors[cls])
     btn:GetFontString():SetTextColor(r, g, b)
-    btn:SetScript("OnClick", function()
-      RR.selectedClass = cls
+    btn:SetScript("OnClick", function() 
+      RR.selectedClass = cls 
       RR:UpdateLogText()
     end)
   end
@@ -161,7 +167,7 @@ function RR:CreateUI()
   edit:SetFontObject(ChatFontNormal)
   edit:SetWidth(540)
   edit:SetAutoFocus(false)
-  edit:SetScript("OnEscapePressed", edit.ClearFocus)
+  edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   scroll:SetScrollChild(edit)
   self.text = edit
 
@@ -207,4 +213,5 @@ end)
 SLASH_RAIDRECON1 = "/raidrecon"
 SlashCmdList["RAIDRECON"] = function() RR:CreateUI() end
 
+-- load message
 DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1RaidRecon loaded. Type /raidrecon to open.|r")
