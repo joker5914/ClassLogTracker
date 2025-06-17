@@ -66,9 +66,16 @@ end
 -- redraw the EditBox
 function RR:UpdateLogText()
   if not self.text then return end
-  local buf = self.logLines[self.selectedClass] or {}
-  if #buf == 0 then
-    self.text:SetText("No data for "..(self.selectedClass or "Class").."s")
+
+  local cls = self.selectedClass
+  if not cls then
+    self.text:SetText("No class selected")
+    return
+  end
+
+  local buf = self.logLines[cls] or {}
+  if table.getn(buf) == 0 then
+    self.text:SetText("No data for " .. cls .. "s")
   else
     self.text:SetText(table.concat(buf, "\n"))
   end
