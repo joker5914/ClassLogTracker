@@ -23,6 +23,7 @@ local classColors = {
   Shaman={0,0.44,0.87},  Druid={1,0.49,0.04},     Hunter={0.67,0.83,0.45},
 }
 
+-- look up class from a unit name
 local function GetClassByName(name)
   local n = normalized(name)
   if normalized(UnitName("player")) == n then
@@ -41,6 +42,7 @@ local function GetClassByName(name)
   return nil
 end
 
+-- record a log line under its class
 local function AddLogLine(msg, sender)
   local cls = GetClassByName(sender)
   if not cls then return end
@@ -52,7 +54,9 @@ local function AddLogLine(msg, sender)
   end
 
   if RR.debug then
-    DEFAULT_CHAT_FRAME:AddMessage("|cff00ced1[RaidRecon Debug]|r ["..cls.."] "..msg)
+    DEFAULT_CHAT_FRAME:AddMessage(
+      "|cff00ced1[RaidRecon Debug]|r ["..cls.."] "..msg
+    )
   end
 
   if cls == RR.selectedClass then
@@ -60,6 +64,7 @@ local function AddLogLine(msg, sender)
   end
 end
 
+-- redraw the edit box
 function RR:UpdateLogText()
   if not self.text then return end
   local buf = self.selectedClass and self.logLines[self.selectedClass]
@@ -70,12 +75,14 @@ function RR:UpdateLogText()
   end
 end
 
+-- toggle party/raid filter
 function RR:ToggleFilterType(button)
   self.filterType = (self.filterType == "party") and "raid" or "party"
   if button then button:SetText("Filter: "..self.filterType) end
   if self.frame then self.frame.title:SetText("Filter: "..self.filterType) end
 end
 
+-- build (or show) the UI
 function RR:CreateUI()
   if self.frame then
     self.frame:Show()
@@ -85,13 +92,13 @@ function RR:CreateUI()
 
   local f = CreateFrame("Frame", "RRFrame", UIParent)
   f:SetWidth(600); f:SetHeight(500)
-  f:SetPoint("CENTER")
+  f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 
   f:SetBackdrop{
     bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
     tile     = true, tileSize = 16, edgeSize = 16,
-    insets   = { left=4, right=4, top=4, bottom=4 },
+    insets   = { left = 4, right = 4, top = 4, bottom = 4 },
   }
   f:SetBackdropColor(0, 0, 0, 0.9)
 
@@ -101,32 +108,37 @@ function RR:CreateUI()
   f:SetScript("OnDragStart", f.StartMoving)
   f:SetScript("OnDragStop",  f.StopMovingOrSizing)
 
+  -- close button
   local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", f, -6, -6)
   close:SetScript("OnClick", function() f:Hide() end)
 
+  -- title text
   f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   f.title:SetPoint("TOP", f, "TOP", 0, -12)
   f.title:SetText("Filter: "..self.filterType)
 
+  -- ChatLog toggle
   local cb = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  cb:SetWidth(100); cb:SetHeight(24)
+  cb:SetSize(100, 24)
   cb:SetPoint("TOPLEFT", f, 16, -40)
   cb:SetText("ChatLog")
   cb:SetScript("OnClick", function() SlashCmdList["CHATLOG"]("") end)
 
+  -- Filter toggle
   local fb = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-  fb:SetWidth(100); fb:SetHeight(24)
+  fb:SetSize(100, 24)
   fb:SetPoint("LEFT", cb, "RIGHT", 8, 0)
   fb:SetText("Filter: "..self.filterType)
   fb:SetScript("OnClick", function() RR:ToggleFilterType(fb) end)
   self.filterButton = fb
 
+  -- class buttons
   local perRow, sx, sy = 6, 90, 28
   local ox, oy = 16, -80
   for i, cls in ipairs(classList) do
     local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    btn:SetWidth(80); btn:SetHeight(24)
+    btn:SetSize(80, 24)
     local row = math.floor((i-1)/perRow)
     local col = mod(i-1, perRow)
     btn:SetPoint("TOPLEFT", f, ox + col*sx, oy - row*sy)
@@ -139,6 +151,7 @@ function RR:CreateUI()
     end)
   end
 
+  -- scrollable log area
   local scroll = CreateFrame("ScrollFrame", "RRScroll", f, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", f, 16, -250)
   scroll:SetPoint("BOTTOMRIGHT", f, -32, 16)
@@ -155,6 +168,7 @@ function RR:CreateUI()
   self.frame = f
 end
 
+-- combat-log hook
 local ef = CreateFrame("Frame")
 ef:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 ef:SetScript("OnEvent", function(_, _, ...)
@@ -180,7 +194,8 @@ ef:SetScript("OnEvent", function(_, _, ...)
   elseif se:find("HEAL") then
     msg = sp.." healed "..(dst or "unknown")
   elseif se=="SPELL_AURA_APPLIED" then
-    msg = (src==UnitName("player") and "You gain "..sp) or (sp.." applied to "..(dst or "unknown"))
+    msg = (src==UnitName("player") and "You gain "..sp)
+        or (sp.." applied to "..(dst or "unknown"))
   else
     msg = sp.." fades from "..(dst or "unknown")
   end
@@ -188,6 +203,7 @@ ef:SetScript("OnEvent", function(_, _, ...)
   AddLogLine(msg, src)
 end)
 
+-- slash command
 SLASH_RAIDRECON1 = "/raidrecon"
 SlashCmdList["RAIDRECON"] = function() RR:CreateUI() end
 
