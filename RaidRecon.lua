@@ -121,12 +121,11 @@ function RR:UpdateDisplay()
   end
 
   -- Show status or populate scrollframe
-  if #lines == 0 then
-    RaidReconStatusText:SetText(
-      "No data for " .. (self.selectedClass or "All"))
+  if not next(lines) then
+    RaidReconStatusText:SetText("No data for " .. (self.selectedClass or "All"))
   else
     RaidReconStatusText:SetText("")
-    -- TODO: populate your scrollframe or fontstrings from `lines`
+    -- populate your scrollframe from `lines`…
   end
 end
 
